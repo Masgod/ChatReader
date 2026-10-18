@@ -1,0 +1,6 @@
+.venv/
+voices/
+config.toml
+config.toml.bad
+*.log
+__pycache__/

@@ -1,0 +1,40 @@
+# Copy to config.toml (the app creates it on first run if missing).
+
+# Twitch channel name, without the '#'. Empty disables Twitch.
+twitch_channel = ""
+
+# YouTube live video ID or URL. Empty disables YouTube.
+youtube_video_id = ""
+
+# Piper voice for Portuguese messages (downloaded into voices/).
+voice_pt = "pt_BR-faber-medium"
+
+# Piper voice for English messages (downloaded into voices/).
+voice_en = "en_US-lessac-medium"
+
+# Language used when detection is unsure or the message is very short: "pt" or "en".
+default_lang = "pt"
+
+# Maximum messages waiting to be spoken. When full, the oldest waiting message is dropped.
+queue_size = 20
+
+# Messages longer than this are truncated before speaking.
+max_chars = 200
+
+# Say "<user> disse:" / "<user> says:" before the text. false reads only the text.
+announce_user = true
+
+# Port of the local overlay server (bound to 127.0.0.1 only).
+port = 8765
+
+# Start the app automatically when Windows starts.
+start_with_windows = false
+
+# Chat users whose messages are never read (bots).
+ignored_users = ["nightbot", "streamelements", "streamlabs", "moobot"]
+
+# Seconds during which the same user's repeated message is skipped.
+repeat_window = 5
+
+# Write debug-level entries to the log file (errors only otherwise).
+debug = false
