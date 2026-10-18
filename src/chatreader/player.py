@@ -24,6 +24,8 @@ class Player:
         self._cond = threading.Condition()
         self._paused = False
         self._shutdown = False
+        # Bumped by skip(); the worker compares it to the value captured when it popped an item.
+        self._skip_gen = 0
         self._thread = threading.Thread(target=self._run, name="chatreader-player", daemon=True)
 
     @property
@@ -54,6 +56,8 @@ class Player:
             self._cond.notify_all()
 
     def skip(self) -> None:
+        with self._cond:
+            self._skip_gen += 1
         self._output.stop()
 
     def shutdown(self) -> None:
@@ -72,11 +76,18 @@ class Player:
                 if self._shutdown:
                     return
                 text, lang = self._queue.popleft()
+                gen = self._skip_gen
             try:
                 wav = self._synth(text, lang)
             except Exception:
                 log.exception("synthesis failed; skipping message")
                 continue
+            with self._cond:
+                # A skip or shutdown during synth must cancel this item before play() starts.
+                if self._shutdown:
+                    return
+                if self._skip_gen != gen:
+                    continue
             try:
                 self._output.play(wav)
             except Exception:
