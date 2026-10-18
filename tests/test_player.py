@@ -1,4 +1,5 @@
 import threading
+import time
 
 from chatreader.player import Player
 
@@ -21,15 +22,18 @@ class FakeOutput:
     def play(self, wav: bytes) -> None:
         if self.fail_on is not None and wav == self.fail_on:
             raise RuntimeError("boom")
+        # Non-latching: a stop() issued while idle is discarded when the next play starts.
+        self._stop.clear()
         with self._lock:
             self.played.append(wav)
         blocking = self.block
         self.started.set()
         if blocking:
-            self._stop.wait(WAIT)
+            self._stop.wait(10)  # long on purpose: only stop() should end it early
         self.played_event.set()
 
     def stop(self) -> None:
+        # Idempotent and safe when idle.
         with self._lock:
             self.stop_calls += 1
         self._stop.set()
@@ -143,6 +147,82 @@ def test_synth_error_skips_message():
         assert wait_until(lambda: out.played == [b"good"])
     finally:
         player.shutdown()
+
+
+def gated_synth(entered, release):
+    """Synth that signals when item "a" starts and holds it until release is set."""
+
+    def synth(text, lang):
+        if text == "a":
+            entered.set()
+            release.wait(WAIT)
+        return text.encode()
+
+    return synth
+
+
+def test_skip_during_synth_does_not_play_that_item():
+    entered, release = threading.Event(), threading.Event()
+    out = FakeOutput()
+    player = Player(gated_synth(entered, release), out, maxsize=10)
+    player.start()
+    try:
+        player.submit("a", "en")
+        assert entered.wait(WAIT)
+        player.skip()
+        release.set()
+        player.submit("b", "en")
+        # If "a" were played, the list could never equal [b].
+        assert wait_until(lambda: out.played == [b"b"])
+    finally:
+        release.set()
+        player.shutdown()
+
+
+def test_skip_when_idle_does_not_cancel_next():
+    out = FakeOutput()
+    player = Player(synth, out, maxsize=10)
+    player.start()
+    try:
+        player.skip()
+        player.submit("x", "en")
+        assert wait_until(lambda: out.played == [b"x"])
+    finally:
+        player.shutdown()
+
+
+def test_shutdown_during_synth_does_not_play():
+    entered, release = threading.Event(), threading.Event()
+    out = FakeOutput()
+    player = Player(gated_synth(entered, release), out, maxsize=10)
+    player.start()
+    try:
+        player.submit("a", "en")
+        assert entered.wait(WAIT)
+        closer = threading.Thread(target=player.shutdown)
+        closer.start()
+        assert wait_until(lambda: player._shutdown)  # shutdown flag is set before synth returns
+        release.set()
+        closer.join(WAIT)
+        assert not closer.is_alive()
+        assert out.played == []
+    finally:
+        release.set()
+        player.shutdown()
+
+
+def test_shutdown_unblocks_play_and_joins_promptly():
+    out = FakeOutput()
+    out.block = True
+    player = Player(synth, out, maxsize=10)
+    player.start()
+    player.submit("a", "en")
+    assert out.started.wait(WAIT)
+    t0 = time.monotonic()
+    player.shutdown()
+    elapsed = time.monotonic() - t0
+    assert not player._thread.is_alive()
+    assert elapsed < WAIT
 
 
 def test_output_error_skips_message():
