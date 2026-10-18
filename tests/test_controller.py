@@ -224,3 +224,11 @@ def test_identical_config_does_not_restart():
         assert tw.started == ["chan"] and tw.stopped == []
     finally:
         c.shutdown()
+
+
+def test_paused_property_reflects_player():
+    p = FakePlayer()
+    c = Controller(Config(), p, None, {})
+    assert c.paused is False
+    p.paused = True
+    assert c.paused is True

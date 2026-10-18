@@ -2,6 +2,7 @@ import asyncio
 import io
 import struct
 import threading
+import time
 import wave
 from dataclasses import asdict, fields
 from importlib import resources
@@ -13,6 +14,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from chatreader.config import Config, normalize, validate
 
+READY_TIMEOUT = 5.0  # seconds run_server waits for uvicorn to start listening
 EXTRA_WAIT = 2.0  # seconds added to the WAV duration before play() gives up
 
 
@@ -126,7 +128,10 @@ def create_app(
             errors = validate(cfg)
         if errors:
             return JSONResponse({"errors": errors}, status_code=422)
-        apply_config(cfg)
+        try:
+            apply_config(cfg)
+        except Exception as e:
+            return JSONResponse({"errors": [f"could not apply settings: {e}"]}, status_code=500)
         return {"ok": True}
 
     @app.post("/api/test")
@@ -146,6 +151,12 @@ def run_server(app: FastAPI, port: int) -> Callable[[], None]:
     server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
+    deadline = time.monotonic() + READY_TIMEOUT
+    while not server.started:
+        if not thread.is_alive() or time.monotonic() > deadline:
+            server.should_exit = True
+            raise RuntimeError(f"could not start server on port {port} (port in use?)")
+        time.sleep(0.02)
 
     def shutdown() -> None:
         server.should_exit = True

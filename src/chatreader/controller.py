@@ -65,6 +65,10 @@ class Controller:
         out = getattr(getattr(self._player, "_output", None), "connected", None)
         return {**self._status, "overlay": "n/a" if out is None else str(out)}
 
+    @property
+    def paused(self) -> bool:
+        return bool(getattr(self._player, "paused", False))
+
     def pause(self) -> None:
         self._player.pause()
 

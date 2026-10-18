@@ -209,3 +209,34 @@ def test_closing_stale_socket_does_not_end_current_play(env):
             new.send_text(f"done:{clip_id(frame)}")
             t.join(5)
             assert not t.is_alive()
+
+
+def test_run_server_starts_and_shuts_down():
+    import socket
+    from fastapi import FastAPI
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    stop = server.run_server(FastAPI(), port)
+    with socket.create_connection(("127.0.0.1", port), timeout=2):
+        pass
+    stop()
+
+
+def test_run_server_raises_when_port_taken():
+    import socket
+    from fastapi import FastAPI
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        s.listen()
+        with pytest.raises(RuntimeError):
+            server.run_server(FastAPI(), s.getsockname()[1])
+
+
+def test_put_returns_500_when_apply_fails():
+    def boom(cfg):
+        raise OSError("disk full")
+
+    with TestClient(create_app(lambda: Config(), boom, Hub(), lambda t: None)) as client:
+        r = client.put("/api/config", json=asdict(Config()))
+    assert r.status_code == 500 and "disk full" in r.json()["errors"][0]

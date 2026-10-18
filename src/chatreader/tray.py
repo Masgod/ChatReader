@@ -20,10 +20,10 @@ def _tooltip(controller) -> str:
 
 
 def build_icon(controller, settings_url: str, overlay_url: str, quit_cb) -> pystray.Icon:
-    toggle = lambda icon, item: controller.resume() if controller._player.paused else controller.pause()  # noqa: E731
-    copy = lambda icon, item: subprocess.run(["clip"], input=overlay_url, text=True, check=False)  # noqa: E731
+    toggle = lambda icon, item: controller.resume() if controller.paused else controller.pause()  # noqa: E731
+    copy = lambda icon, item: subprocess.run(["clip"], input=overlay_url, text=True, check=False, creationflags=0x08000000)  # noqa: E731
     menu = pystray.Menu(
-        pystray.MenuItem(lambda item: "Resume" if controller._player.paused else "Pause", toggle),
+        pystray.MenuItem(lambda item: "Resume" if controller.paused else "Pause", toggle),
         pystray.MenuItem("Skip current", lambda icon, item: controller.skip()),
         pystray.MenuItem("Settings...", lambda icon, item: webbrowser.open(settings_url)),
         pystray.MenuItem("Copy overlay URL", copy),
