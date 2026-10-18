@@ -33,3 +33,4 @@ packages = ["src/chatreader"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["slow: needs downloaded Piper voices in ./voices"]
