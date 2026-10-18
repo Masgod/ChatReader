@@ -235,3 +235,18 @@ def test_output_error_skips_message():
         assert wait_until(lambda: out.played == [b"good"])
     finally:
         player.shutdown()
+
+
+def test_set_maxsize_drops_oldest_when_shrinking():
+    player = Player(synth, FakeOutput(), maxsize=5)  # not started: items stay queued
+    for t in "abcde":
+        player.submit(t, "en")
+    player.set_maxsize(2)
+    assert player.pending == 2
+    assert list(player._queue) == [("d", "en"), ("e", "en")]
+    player.submit("f", "en")
+    assert list(player._queue) == [("e", "en"), ("f", "en")]
+    player.set_maxsize(4)
+    for t in "ghi":
+        player.submit(t, "en")
+    assert player.pending == 4
