@@ -168,3 +168,70 @@ def test_session_dropped_without_messages_returns_falsy(monkeypatch):
     monkeypatch.setattr(twitch, "connect", lambda url: ws)
     result = _session("chan", lambda m: None, threading.Event(), lambda s: None)
     assert not result
+
+
+# --- YouTube source ---------------------------------------------------------
+import functools
+from types import SimpleNamespace
+
+from chatreader.sources import youtube
+
+
+class FakeYTChat:
+    """Serves queued batches of items; sets `stop` once they run out."""
+
+    def __init__(self, batches, stop, alive=True):
+        self.batches = list(batches)
+        self.stop = stop
+        self.alive = alive
+        self.terminated = False
+
+    def is_alive(self):
+        return self.alive
+
+    def get(self):
+        return self
+
+    def sync_items(self):
+        if self.batches:
+            return self.batches.pop(0)
+        self.stop.set()
+        return []
+
+    def terminate(self):
+        self.terminated = True
+
+
+def _item(name, text):
+    return SimpleNamespace(author=SimpleNamespace(name=name), message=text)
+
+
+def test_to_msg_maps_fields():
+    msg = youtube.to_msg(_item("Bob", "ola"))
+    assert (msg.platform, msg.user, msg.text) == ("youtube", "Bob", "ola")
+    assert msg.ts > 0
+
+
+def test_run_youtube_delivers_items_then_stops():
+    stop = threading.Event()
+    chat = FakeYTChat([[_item("A", "um"), _item("B", "dois")]], stop)
+    got = []
+    youtube.run_youtube("vid", got.append, stop, lambda s: None,
+                        chat_factory=lambda video_id: chat)
+    assert [(m.user, m.text) for m in got] == [("A", "um"), ("B", "dois")]
+    assert chat.terminated
+
+
+def test_chat_ended_reports_failed_after_retries(monkeypatch):
+    stop = threading.Event()
+    chat = FakeYTChat([], stop, alive=False)
+    real = youtube.run_with_backoff
+    monkeypatch.setattr(
+        youtube, "run_with_backoff",
+        functools.partial(real, sleep=lambda s: None),
+    )
+    statuses = []
+    youtube.run_youtube("vid", lambda m: None, stop, statuses.append,
+                        chat_factory=lambda video_id: chat)
+    assert statuses[-1] == "failed"
+    assert statuses.count("connected") == 5
