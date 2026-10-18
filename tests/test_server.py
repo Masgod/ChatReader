@@ -22,6 +22,10 @@ def make_wav(seconds: float = 0.0) -> bytes:
     return buf.getvalue()
 
 
+def clip_id(frame: bytes) -> int:
+    return int.from_bytes(frame[:4], "big")
+
+
 def wait_for(cond, timeout=5.0):
     end = time.monotonic() + timeout
     while not cond():
@@ -112,10 +116,11 @@ def test_hub_play_waits_for_done(env):
         wait_for(lambda: hub.connected)
         t = threading.Thread(target=hub.play, args=(wav,))
         t.start()
-        assert ws.receive_bytes() == wav
+        frame = ws.receive_bytes()
+        assert frame[4:] == wav
         time.sleep(0.05)
         assert t.is_alive()
-        ws.send_text("done")
+        ws.send_text(f"done:{clip_id(frame)}")
         t.join(5)
         assert not t.is_alive()
 
@@ -164,3 +169,43 @@ def test_post_test_calls_speak_test(env):
     client, _, _, spoken = env
     assert client.post("/api/test", json={"text": "hello"}).status_code == 200
     assert spoken == ["hello"]
+
+
+def test_stale_done_does_not_release_next_play(env):
+    client, hub, *_ = env
+    with client.websocket_connect("/ws") as ws:
+        wait_for(lambda: hub.connected)
+        server.EXTRA_WAIT = 0.05
+        try:
+            hub.play(make_wav())  # clip A times out
+        finally:
+            server.EXTRA_WAIT = 2.0
+        a = clip_id(ws.receive_bytes())
+        t = threading.Thread(target=hub.play, args=(make_wav(30),))
+        t.start()
+        b = clip_id(ws.receive_bytes())
+        assert b != a
+        ws.send_text(f"done:{a}")  # late reply for A
+        time.sleep(0.1)
+        assert t.is_alive()
+        ws.send_text(f"done:{b}")
+        t.join(5)
+        assert not t.is_alive()
+
+
+def test_closing_stale_socket_does_not_end_current_play(env):
+    client, hub, *_ = env
+    with client.websocket_connect("/ws") as old:
+        wait_for(lambda: hub.connected)
+        first = hub._ws
+        with client.websocket_connect("/ws") as new:
+            wait_for(lambda: hub._ws is not first)
+            t = threading.Thread(target=hub.play, args=(make_wav(30),))
+            t.start()
+            frame = new.receive_bytes()
+            old.close()
+            time.sleep(0.2)
+            assert t.is_alive()
+            new.send_text(f"done:{clip_id(frame)}")
+            t.join(5)
+            assert not t.is_alive()
