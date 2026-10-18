@@ -49,7 +49,7 @@ class Player:
     def set_maxsize(self, n: int) -> None:
         with self._cond:
             # A deque's maxlen is read-only; rebuilding keeps the newest n items (drops oldest).
-            self._queue = collections.deque(self._queue, maxlen=n)
+            self._queue = collections.deque(self._queue, maxlen=max(1, n))
 
     def pause(self) -> None:
         with self._cond:
