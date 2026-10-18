@@ -1,0 +1,93 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>chatreader settings</title>
+<style>
+  body { font: 15px system-ui, sans-serif; max-width: 34rem; margin: 2rem auto; padding: 0 1rem; }
+  label { display: block; margin: .6rem 0; }
+  input[type=text], input[type=number], select { width: 100%; box-sizing: border-box; padding: .3rem; }
+  #errors { color: #b00020; }
+  #status { color: #2e7d32; }
+</style>
+<h1>chatreader</h1>
+<form id="f">
+  <label>Twitch channel <input type="text" name="twitch_channel"></label>
+  <label>YouTube video ID or URL <input type="text" name="youtube_video_id"></label>
+  <label>Portuguese voice <input type="text" name="voice_pt"></label>
+  <label>English voice <input type="text" name="voice_en"></label>
+  <label>Default language
+    <select name="default_lang"><option value="pt">pt</option><option value="en">en</option></select>
+  </label>
+  <label>Queue size <input type="number" name="queue_size" min="1"></label>
+  <label>Max characters <input type="number" name="max_chars" min="1"></label>
+  <label><input type="checkbox" name="announce_user"> Announce user name</label>
+  <label>Port (restart required) <input type="number" name="port" min="1" max="65535"></label>
+  <label><input type="checkbox" name="start_with_windows"> Start with Windows</label>
+  <label>Ignored users (one per line) <textarea name="ignored_users" rows="4" style="width:100%"></textarea></label>
+  <label>Repeat window <input type="number" name="repeat_window" min="0"></label>
+  <label><input type="checkbox" name="debug"> Debug</label>
+  <button type="submit">Save</button>
+  <button type="button" id="test">Test voice</button>
+</form>
+<ul id="errors"></ul>
+<p id="status"></p>
+<script>
+const form = document.getElementById("f");
+const errorsEl = document.getElementById("errors");
+const statusEl = document.getElementById("status");
+const NUMBERS = ["queue_size", "max_chars", "port", "repeat_window"];
+const SAMPLES = { pt: "Olá, este é um teste de voz.", en: "Hello, this is a voice test." };
+
+function fill(cfg) {
+  for (const el of form.elements) {
+    if (!el.name) continue;
+    const v = cfg[el.name];
+    if (el.type === "checkbox") el.checked = v;
+    else el.value = Array.isArray(v) ? v.join("\n") : v;
+  }
+}
+
+function read() {
+  const cfg = {};
+  for (const el of form.elements) {
+    if (!el.name) continue;
+    if (el.type === "checkbox") cfg[el.name] = el.checked;
+    else if (NUMBERS.includes(el.name)) cfg[el.name] = el.value === "" ? null : Number(el.value);
+    else if (el.name === "ignored_users")
+      cfg[el.name] = el.value.split("\n").map((s) => s.trim()).filter(Boolean);
+    else cfg[el.name] = el.value;
+  }
+  return cfg;
+}
+
+fetch("/api/config").then((r) => r.json()).then(fill);
+
+form.onsubmit = async (e) => {
+  e.preventDefault();
+  errorsEl.replaceChildren();
+  statusEl.textContent = "";
+  const r = await fetch("/api/config", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(read()),
+  });
+  if (r.ok) {
+    statusEl.textContent = "Saved.";
+    fetch("/api/config").then((x) => x.json()).then(fill);
+    return;
+  }
+  const body = await r.json().catch(() => ({}));
+  for (const msg of body.errors || ["Save failed"]) {
+    const li = document.createElement("li");
+    li.textContent = msg;
+    errorsEl.append(li);
+  }
+};
+
+document.getElementById("test").onclick = () =>
+  fetch("/api/test", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: SAMPLES[form.elements.default_lang.value] }),
+  });
+</script>
