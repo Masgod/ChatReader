@@ -250,3 +250,11 @@ def test_set_maxsize_drops_oldest_when_shrinking():
     for t in "ghi":
         player.submit(t, "en")
     assert player.pending == 4
+
+
+def test_set_maxsize_clamps_to_one():
+    player = Player(synth, FakeOutput(), maxsize=3)
+    player.submit("a", "en")
+    player.submit("b", "en")
+    player.set_maxsize(0)
+    assert list(player._queue) == [("b", "en")]

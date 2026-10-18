@@ -26,13 +26,16 @@ class Controller:
         self._status = {name: "off" for name in _SOURCE_VALUE}
 
     def on_msg(self, msg: Msg) -> None:
-        with self._lock:
-            cfg = self.cfg
-            msg = apply(msg, cfg, self._filter_state)
-        if msg is None:
-            return
-        lang = detect_lang(msg.text, cfg.default_lang)
-        self._player.submit(spoken_text(msg, lang, cfg.announce_user), lang)
+        try:
+            with self._lock:
+                cfg = self.cfg
+                msg = apply(msg, cfg, self._filter_state)
+            if msg is None:
+                return
+            lang = detect_lang(msg.text, cfg.default_lang)
+            self._player.submit(spoken_text(msg, lang, cfg.announce_user), lang)
+        except Exception:
+            log.exception("message dropped")
 
     def start(self) -> None:
         with self._lock:
@@ -45,14 +48,18 @@ class Controller:
             old, self.cfg = self.cfg, new
             if new.repeat_window != old.repeat_window:
                 self._filter_state = FilterState(size=new.repeat_window)
-            self._tts.reload(new)
-            if new.queue_size != old.queue_size:
-                self._player.set_maxsize(new.queue_size)
             for name, attr in _SOURCE_VALUE.items():
                 if getattr(new, attr) != getattr(old, attr):
                     to_join.append(self._stop_source(name))
                     self._start_source(name)
         self._join(to_join)
+        # Slow disk work stays outside the lock so on_msg is never blocked by a voice load.
+        try:
+            self._tts.reload(new)
+        except Exception:
+            log.exception("tts reload failed")
+        if new.queue_size != old.queue_size:
+            self._player.set_maxsize(new.queue_size)
 
     def status(self) -> dict[str, str]:
         out = getattr(getattr(self._player, "_output", None), "connected", None)

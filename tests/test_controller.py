@@ -161,3 +161,66 @@ def test_pause_resume_skip_speak_test():
     c.speak_test("hello there my friends")
     assert player.calls == ["pause", "resume", "skip"]
     assert player.submitted == [("hello there my friends", "en")]
+
+
+def test_on_msg_exception_is_isolated():
+    c, player, *_ = make()
+
+    def flaky(text, lang):
+        if "boom" in text:
+            raise RuntimeError("x")
+        player.submitted.append((text, lang))
+
+    player.submit = flaky
+    c.on_msg(Msg("twitch", "alice", "boom boom this fails", 0.0))
+    c.on_msg(Msg("twitch", "bob", "this one works fine ok", 0.0))
+    assert len(player.submitted) == 1 and "works" in player.submitted[0][0]
+
+
+def test_slow_reload_does_not_block_on_msg():
+    c, player, tts, *_ = make()
+    entered, release = threading.Event(), threading.Event()
+    tts.reload = lambda cfg: (entered.set(), release.wait(WAIT))
+    t = threading.Thread(target=c.apply_config, args=(replace(c.cfg, announce_user=False),))
+    t.start()
+    try:
+        assert entered.wait(WAIT)
+        done = threading.Event()
+        threading.Thread(
+            target=lambda: (c.on_msg(Msg("twitch", "al", "eu gostei muito dessa jogada", 0.0)), done.set())
+        ).start()
+        assert done.wait(WAIT)
+    finally:
+        release.set()
+        t.join(WAIT)
+
+
+def test_raising_reload_still_swaps_and_restarts():
+    c, player, tts, tw, yt = make()
+    c.start()
+    try:
+        assert tw.started_evt.wait(WAIT)
+
+        def bad(cfg):
+            raise RuntimeError("disk")
+
+        tts.reload = bad
+        tw.started_evt.clear()
+        new = replace(c.cfg, twitch_channel="other", queue_size=3)
+        c.apply_config(new)
+        assert c.cfg is new
+        assert tw.started_evt.wait(WAIT) and tw.started == ["chan", "other"]
+        assert ("maxsize", 3) in player.calls
+    finally:
+        c.shutdown()
+
+
+def test_identical_config_does_not_restart():
+    c, _, _, tw, _ = make()
+    c.start()
+    try:
+        assert tw.started_evt.wait(WAIT)
+        c.apply_config(replace(c.cfg))
+        assert tw.started == ["chan"] and tw.stopped == []
+    finally:
+        c.shutdown()
