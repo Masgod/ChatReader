@@ -2,7 +2,7 @@
 <meta charset="utf-8">
 <title>chatreader overlay</title>
 <script>
-let ws, audio = null;
+let ws, audio = null, clipId = 0;
 
 function finish() {
   if (audio) {
@@ -10,7 +10,7 @@ function finish() {
     URL.revokeObjectURL(audio.src);
     audio = null;
   }
-  if (ws && ws.readyState === WebSocket.OPEN) ws.send("done");
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send("done:" + clipId);
 }
 
 function connect() {
@@ -21,7 +21,9 @@ function connect() {
       if (e.data === "stop") finish();
       return;
     }
-    audio = new Audio(URL.createObjectURL(new Blob([e.data], { type: "audio/wav" })));
+    if (audio) { audio.pause(); URL.revokeObjectURL(audio.src); }
+    clipId = new DataView(e.data).getUint32(0);
+    audio = new Audio(URL.createObjectURL(new Blob([e.data.slice(4)], { type: "audio/wav" })));
     audio.onended = audio.onerror = finish;
     audio.play().catch(finish);
   };

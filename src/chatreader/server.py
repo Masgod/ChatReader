@@ -1,5 +1,6 @@
 import asyncio
 import io
+import struct
 import threading
 import wave
 from dataclasses import asdict, fields
@@ -27,6 +28,8 @@ class Hub:
         self._ws: WebSocket | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._done = threading.Event()
+        self._seq = 0
+        self._current = 0  # id of the in-flight clip; "done" for any other id is stale
 
     @property
     def connected(self) -> bool:
@@ -43,8 +46,11 @@ class Hub:
             return False
 
     def play(self, wav: bytes) -> None:
+        self._seq += 1
+        clip = self._current = self._seq
         self._done.clear()
-        if self._send(lambda ws: ws.send_bytes(wav)):
+        # wire format: 4-byte big-endian clip id, then the WAV; overlay replies "done:<id>"
+        if self._send(lambda ws: ws.send_bytes(struct.pack(">I", clip) + wav)):
             self._done.wait(_wav_seconds(wav) + EXTRA_WAIT)
 
     def stop(self) -> None:
@@ -56,14 +62,15 @@ class Hub:
         self._ws, self._loop = ws, asyncio.get_running_loop()
         try:
             while True:
-                if await ws.receive_text() == "done":
+                msg = await ws.receive_text()
+                if msg == f"done:{self._current}":
                     self._done.set()
         except WebSocketDisconnect:
             pass
         finally:
             if self._ws is ws:
                 self._ws = None
-            self._done.set()
+                self._done.set()
 
 
 def _page(name: str) -> HTMLResponse:
