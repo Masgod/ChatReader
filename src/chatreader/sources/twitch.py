@@ -3,6 +3,7 @@ import threading
 import time
 from typing import Callable
 
+from websockets.exceptions import ConnectionClosed
 from websockets.sync.client import connect
 
 from chatreader.models import Msg
@@ -29,20 +30,20 @@ def parse_privmsg(line: str) -> Msg | None:
     return Msg("twitch", tags.get("display-name") or nick, text, time.time())
 
 
-def run_twitch(
+def _session(
     channel: str,
     on_msg: Callable[[Msg], None],
     stop: threading.Event,
     on_status: Callable[[str], None],
-) -> None:
-    channel = channel.lstrip("#").lower()
-
-    def session() -> bool:
-        delivered = False
+) -> bool:
+    """One connection. Returns True if at least one message was delivered."""
+    delivered = False
+    try:
         with connect(URL) as ws:
             ws.send(f"NICK justinfan{random.randint(10000, 99999)}")
             ws.send("CAP REQ :twitch.tv/tags")
             ws.send(f"JOIN #{channel}")
+            on_status("connected")
             while not stop.is_set():
                 try:
                     frame = ws.recv(timeout=1)
@@ -53,12 +54,22 @@ def run_twitch(
                         ws.send("PONG :tmi.twitch.tv")
                         continue
                     msg = parse_privmsg(line)
-                    if msg is None:
-                        continue
-                    if not delivered:
+                    if msg is not None:
                         delivered = True
-                        on_status("connected")
-                    on_msg(msg)
+                        on_msg(msg)
+    except (ConnectionClosed, OSError):
+        # Dropped connection: report what we got so the runner can decide on backoff.
         return delivered
+    return delivered
 
-    run_with_backoff(session, stop, on_status)
+
+def run_twitch(
+    channel: str,
+    on_msg: Callable[[Msg], None],
+    stop: threading.Event,
+    on_status: Callable[[str], None],
+) -> None:
+    channel = channel.lstrip("#").lower()
+    run_with_backoff(
+        lambda: _session(channel, on_msg, stop, on_status), stop, on_status
+    )

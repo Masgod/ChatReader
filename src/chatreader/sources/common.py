@@ -1,5 +1,8 @@
+import logging
 import threading
 from typing import Callable
+
+log = logging.getLogger(__name__)
 
 
 def run_with_backoff(
@@ -21,6 +24,7 @@ def run_with_backoff(
         try:
             ok = bool(fn())
         except Exception:
+            log.warning("source call failed; retrying", exc_info=True)
             ok = False
         if stop.is_set():
             return

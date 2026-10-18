@@ -1,8 +1,34 @@
+import logging
 import threading
 
+from websockets.exceptions import ConnectionClosed
+
 from chatreader.models import Msg
+from chatreader.sources import twitch
 from chatreader.sources.common import run_with_backoff
-from chatreader.sources.twitch import parse_privmsg
+from chatreader.sources.twitch import _session, parse_privmsg
+
+
+class FakeWS:
+    """Yields queued frames, then raises ConnectionClosed like a dropped socket."""
+
+    def __init__(self, frames):
+        self.frames = list(frames)
+        self.sent = []
+
+    def send(self, msg):
+        self.sent.append(msg)
+
+    def recv(self, timeout=None):
+        if not self.frames:
+            raise ConnectionClosed(None, None)
+        return self.frames.pop(0)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
 
 
 def test_parse_privmsg_with_tags():
@@ -111,3 +137,34 @@ def test_stop_event_ends_loop():
     run_with_backoff(fn, stop, lambda s: None, sleep=waits.append)
     assert len(calls) == 1
     assert waits == []
+
+
+def test_failing_fn_is_logged(caplog):
+    stop = threading.Event()
+
+    def fn():
+        raise RuntimeError("boom")
+
+    caplog.set_level(logging.WARNING)
+    run_with_backoff(fn, stop, lambda s: None, sleep=lambda s: stop.set())
+    records = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert records
+    assert records[0].exc_info is not None
+    assert "boom" in str(records[0].exc_info[1])
+
+
+def test_session_delivering_then_dropped_returns_truthy(monkeypatch):
+    frame = ":alice!alice@alice.tmi.twitch.tv PRIVMSG #chan :hi"
+    ws = FakeWS([frame])
+    monkeypatch.setattr(twitch, "connect", lambda url: ws)
+    got = []
+    result = _session("chan", got.append, threading.Event(), lambda s: None)
+    assert result
+    assert [m.text for m in got] == ["hi"]
+
+
+def test_session_dropped_without_messages_returns_falsy(monkeypatch):
+    ws = FakeWS([])
+    monkeypatch.setattr(twitch, "connect", lambda url: ws)
+    result = _session("chan", lambda m: None, threading.Event(), lambda s: None)
+    assert not result
