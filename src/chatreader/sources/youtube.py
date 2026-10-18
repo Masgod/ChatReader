@@ -1,3 +1,4 @@
+import logging
 import threading
 import time
 from typing import Callable
@@ -7,9 +8,11 @@ import pytchat
 from chatreader.models import Msg
 from chatreader.sources.common import run_with_backoff
 
+log = logging.getLogger(__name__)
+
 
 def to_msg(item) -> Msg:
-    return Msg("youtube", item.author.name, item.message, time.time())
+    return Msg("youtube", item.author.name, item.message or "", time.time())
 
 
 def _session(
@@ -29,9 +32,15 @@ def _session(
                 delivered = True
                 on_msg(to_msg(item))
             stop.wait(0.5)
+    except Exception:
+        # Keep `delivered` so the runner resets backoff after a mid-stream error.
+        log.warning("youtube chat loop failed", exc_info=True)
     finally:
         # pytchat runs a background thread per chat; release it on every exit path.
-        chat.terminate()
+        try:
+            chat.terminate()
+        except Exception:
+            log.debug("youtube chat terminate failed", exc_info=True)
     return delivered
 
 

@@ -235,3 +235,49 @@ def test_chat_ended_reports_failed_after_retries(monkeypatch):
                         chat_factory=lambda video_id: chat)
     assert statuses[-1] == "failed"
     assert statuses.count("connected") == 5
+
+
+def test_to_msg_none_message_becomes_empty():
+    msg = youtube.to_msg(_item("Bob", None))
+    assert msg.text == ""
+
+
+def test_terminate_error_keeps_delivered_result():
+    stop = threading.Event()
+
+    class TerminateBoom(FakeYTChat):
+        def terminate(self):
+            raise RuntimeError("terminate boom")
+
+    chat = TerminateBoom([[_item("A", "um")]], stop)
+    result = youtube._session("vid", lambda m: None, stop, lambda s: None,
+                              lambda video_id: chat)
+    assert result is True
+
+
+def test_error_after_delivery_returns_true():
+    stop = threading.Event()
+
+    class GetBoom(FakeYTChat):
+        def get(self):
+            if self.batches:
+                return self
+            raise RuntimeError("get boom")
+
+    chat = GetBoom([[_item("A", "um")]], stop)
+    result = youtube._session("vid", lambda m: None, stop, lambda s: None,
+                              lambda video_id: chat)
+    assert result is True
+
+
+def test_error_before_delivery_returns_false():
+    stop = threading.Event()
+
+    class GetBoom(FakeYTChat):
+        def get(self):
+            raise RuntimeError("get boom")
+
+    chat = GetBoom([], stop)
+    result = youtube._session("vid", lambda m: None, stop, lambda s: None,
+                              lambda video_id: chat)
+    assert result is False
