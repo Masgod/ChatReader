@@ -18,6 +18,9 @@ dependencies = [
 [project.scripts]
 chatreader = "chatreader.main:main"
 
+[project.gui-scripts]
+chatreader-tray = "chatreader.main:main"
+
 [dependency-groups]
 dev = [
     "pytest",
