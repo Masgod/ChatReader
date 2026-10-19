@@ -27,16 +27,19 @@ def _setup_logging(app: Path, debug: bool) -> None:
 def make_apply(controller, path: Path, set_startup, save=save_config):
     """Build the PUT /api/config callback. The shortcut toggle runs first so a failure applies nothing."""
 
+    lock = threading.Lock()  # saves run in worker threads, so serialize them
+
     def apply_config(new: Config) -> None:
-        if new.start_with_windows != controller.cfg.start_with_windows:
-            try:
-                set_startup(new.start_with_windows)
-            except Exception:
-                logging.getLogger("chatreader").exception("startup shortcut failed")
-                raise
-        controller.apply_config(new)
-        save(path, new)
-        logging.getLogger().setLevel(logging.DEBUG if new.debug else logging.ERROR)
+        with lock:
+            if new.start_with_windows != controller.cfg.start_with_windows:
+                try:
+                    set_startup(new.start_with_windows)
+                except Exception:
+                    logging.getLogger("chatreader").exception("startup shortcut failed")
+                    raise
+            controller.apply_config(new)
+            save(path, new)
+            logging.getLogger().setLevel(logging.DEBUG if new.debug else logging.ERROR)
 
     return apply_config
 
@@ -84,10 +87,11 @@ def main() -> None:
             stop_server = run_server(app_obj, cfg.port)  # raises if the port is taken
             if first_run:
                 webbrowser.open(f"{base}/settings")
-            failed = ensure_voices(voices, [cfg.voice_pt, cfg.voice_en])
+            cur = controller.cfg  # the user may have saved settings while the page was open
+            failed = ensure_voices(voices, [cur.voice_pt, cur.voice_en])
             if failed:
                 icon.notify("Could not download voices: " + ", ".join(failed), "ChatReader")
-            tts.reload(cfg)
+            tts.reload(controller.cfg)
             player.start()
             controller.start()
         except Exception as e:

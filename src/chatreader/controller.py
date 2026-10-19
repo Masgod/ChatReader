@@ -40,7 +40,8 @@ class Controller:
     def start(self) -> None:
         with self._lock:
             for name in _SOURCE_VALUE:
-                self._start_source(name)
+                if name not in self._running:  # a settings save may already have started it
+                    self._start_source(name)
 
     def apply_config(self, new: Config) -> None:
         to_join = []
@@ -54,10 +55,11 @@ class Controller:
                     self._start_source(name)
         self._join(to_join)
         # Slow disk work stays outside the lock so on_msg is never blocked by a voice load.
-        try:
-            self._tts.reload(new)
-        except Exception:
-            log.exception("tts reload failed")
+        if (new.voice_pt, new.voice_en) != (old.voice_pt, old.voice_en):
+            try:
+                self._tts.reload(new)
+            except Exception:
+                log.exception("tts reload failed")
         if new.queue_size != old.queue_size:
             self._player.set_maxsize(new.queue_size)
 

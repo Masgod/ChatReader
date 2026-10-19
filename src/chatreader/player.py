@@ -74,7 +74,12 @@ class Player:
             self._thread.join(timeout=2)
 
     def _run(self) -> None:
+        wait_connected = getattr(self._output, "wait_connected", None)
         while True:
+            # Hold messages in the queue (not synthesized, not dropped) until an overlay is listening.
+            while wait_connected and not wait_connected(0.5):
+                if self._shutdown:
+                    return
             with self._cond:
                 while not self._shutdown and (self._paused or not self._queue):
                     self._cond.wait()

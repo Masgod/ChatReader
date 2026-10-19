@@ -6,6 +6,7 @@ from pathlib import Path
 import tomli_w
 
 TWITCH_RE = re.compile(r"[a-z0-9_]{3,25}")
+VOICE_NAME_RE = re.compile(r"[A-Za-z0-9_]+-[A-Za-z0-9_]+-[a-z_]+")
 YOUTUBE_RE = re.compile(r"[A-Za-z0-9_-]{11}")
 YOUTUBE_URL_RE = re.compile(r"(?:v=|youtu\.be/|/live/|/embed/)([A-Za-z0-9_-]{11})")
 
@@ -39,8 +40,20 @@ def load_config(path: Path) -> Config:
     except (tomllib.TOMLDecodeError, UnicodeDecodeError):
         path.replace(path.with_name(path.name + ".bad"))
         return Config()
-    known = {f.name for f in fields(Config)}
-    return Config(**{k: v for k, v in data.items() if k in known})
+    defaults = Config()
+    known = {f.name: getattr(defaults, f.name) for f in fields(Config)}
+    kept = {k: v for k, v in data.items() if k in known and _same_type(v, known[k])}
+    cfg = Config(**kept)
+    if validate(cfg):  # parseable but unusable values: treat like a corrupt file
+        path.replace(path.with_name(path.name + ".bad"))
+        return defaults
+    return cfg
+
+
+def _same_type(v, default) -> bool:
+    if isinstance(default, list):
+        return isinstance(v, list) and all(isinstance(x, str) for x in v)
+    return type(v) is type(default)  # exact type: bool is not int
 
 
 def save_config(path: Path, cfg: Config) -> None:
@@ -64,6 +77,13 @@ def validate(cfg: Config) -> list[str]:
         errors.append("youtube_video_id must be an 11-char YouTube ID")
     if cfg.queue_size < 1:
         errors.append("queue_size must be >= 1")
+    if cfg.max_chars < 1:
+        errors.append("max_chars must be >= 1")
+    if cfg.repeat_window < 0:
+        errors.append("repeat_window must be >= 0")
+    for attr in ("voice_pt", "voice_en"):
+        if not VOICE_NAME_RE.fullmatch(getattr(cfg, attr)):
+            errors.append(f"{attr} must look like pt_BR-faber-medium")
     if not 1 <= cfg.port <= 65535:
         errors.append("port must be between 1 and 65535")
     if cfg.default_lang not in ("pt", "en"):

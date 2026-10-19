@@ -44,12 +44,17 @@ def _session(
     return delivered
 
 
+def _create_chat(**kw):
+    # interruptable=True installs a SIGINT handler, which only works on the main thread.
+    return pytchat.create(interruptable=False, **kw)
+
+
 def run_youtube(
     video_id: str,
     on_msg: Callable[[Msg], None],
     stop: threading.Event,
     on_status: Callable[[str], None],
-    chat_factory: Callable[..., object] = pytchat.create,
+    chat_factory: Callable[..., object] = _create_chat,
 ) -> None:
     run_with_backoff(
         lambda: _session(video_id, on_msg, stop, on_status, chat_factory),

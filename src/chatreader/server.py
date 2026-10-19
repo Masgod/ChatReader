@@ -10,7 +10,7 @@ from typing import Callable
 
 import uvicorn
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 from chatreader.config import Config, normalize, validate
 
@@ -31,11 +31,15 @@ class Hub:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._done = threading.Event()
         self._seq = 0
+        self._connected = threading.Event()
         self._current = 0  # id of the in-flight clip; "done" for any other id is stale
 
     @property
     def connected(self) -> bool:
         return self._ws is not None
+
+    def wait_connected(self, timeout: float) -> bool:
+        return self._connected.wait(timeout)
 
     def _send(self, coro_fn) -> bool:
         ws, loop = self._ws, self._loop
@@ -62,6 +66,7 @@ class Hub:
     async def serve(self, ws: WebSocket) -> None:
         await ws.accept()
         self._ws, self._loop = ws, asyncio.get_running_loop()
+        self._connected.set()
         try:
             while True:
                 msg = await ws.receive_text()
@@ -72,7 +77,35 @@ class Hub:
         finally:
             if self._ws is ws:
                 self._ws = None
+                self._connected.clear()
                 self._done.set()
+
+
+_LOCAL_HOSTS = {"127.0.0.1", "localhost", "[::1]"}
+
+
+class LocalOnly:
+    """Reject DNS-rebinding (foreign Host), cross-site requests (foreign Origin) and non-JSON writes."""
+
+    def __init__(self, app) -> None:
+        self.app = app
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope["type"] in ("http", "websocket"):
+            h = {k.decode("latin-1"): v.decode("latin-1") for k, v in scope["headers"]}
+            host = h.get("host", "")
+            origin = h.get("origin")
+            bad = host.rsplit(":", 1)[0] not in _LOCAL_HOSTS and host not in _LOCAL_HOSTS
+            bad = bad or (origin is not None and origin.split("://", 1)[-1] != host)
+            writing = scope["type"] == "http" and scope["method"] in ("POST", "PUT")
+            bad = bad or (writing and not h.get("content-type", "").startswith("application/json"))
+            if bad:
+                if scope["type"] == "websocket":
+                    await send({"type": "websocket.close", "code": 1008})
+                else:
+                    await Response(status_code=403)(scope, receive, send)
+                return
+        await self.app(scope, receive, send)
 
 
 def _page(name: str) -> HTMLResponse:
@@ -103,6 +136,7 @@ def create_app(
     speak_test: Callable[[str], None],
 ) -> FastAPI:
     app = FastAPI()
+    app.add_middleware(LocalOnly)
 
     @app.get("/overlay")
     def overlay():
@@ -129,7 +163,7 @@ def create_app(
         if errors:
             return JSONResponse({"errors": errors}, status_code=422)
         try:
-            apply_config(cfg)
+            await asyncio.to_thread(apply_config, cfg)  # slow: subprocess, thread joins, voice load
         except Exception as e:
             return JSONResponse({"errors": [f"could not apply settings: {e}"]}, status_code=500)
         return {"ok": True}

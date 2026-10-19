@@ -90,7 +90,7 @@ def test_apply_config_restarts_only_changed_source():
     try:
         assert tw.started_evt.wait(WAIT) and yt.started_evt.wait(WAIT)
         tw.started_evt.clear()
-        c.apply_config(replace(cfg, twitch_channel="other", queue_size=5))
+        c.apply_config(replace(cfg, twitch_channel="other", queue_size=5, voice_en="en_US-amy-medium"))
         assert tw.started_evt.wait(WAIT)
         assert tw.started == ["chan", "other"]
         assert tw.stopped == ["chan"]
@@ -181,7 +181,7 @@ def test_slow_reload_does_not_block_on_msg():
     c, player, tts, *_ = make()
     entered, release = threading.Event(), threading.Event()
     tts.reload = lambda cfg: (entered.set(), release.wait(WAIT))
-    t = threading.Thread(target=c.apply_config, args=(replace(c.cfg, announce_user=False),))
+    t = threading.Thread(target=c.apply_config, args=(replace(c.cfg, voice_en="en_US-amy-medium"),))
     t.start()
     try:
         assert entered.wait(WAIT)

@@ -5,12 +5,11 @@ import wave
 from collections.abc import Callable
 from pathlib import Path
 
-from chatreader.config import Config
+from chatreader.config import VOICE_NAME_RE, Config
 
 HF_BASE = "https://huggingface.co/rhasspy/piper-voices/resolve/main"
 
 
-VOICE_NAME_RE = re.compile(r"[A-Za-z0-9_]+-[A-Za-z0-9_]+-[a-z_]+")
 
 
 def voice_urls(name: str) -> tuple[str, str]:

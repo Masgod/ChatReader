@@ -38,7 +38,7 @@ def env():
     applied, spoken = [], []
     hub = Hub()
     app = create_app(lambda: Config(), applied.append, hub, spoken.append)
-    with TestClient(app) as client:
+    with TestClient(app, base_url="http://127.0.0.1") as client:
         yield client, hub, applied, spoken
 
 
@@ -112,7 +112,7 @@ def test_overlay_and_settings_pages_served(env):
 def test_hub_play_waits_for_done(env):
     client, hub, *_ = env
     wav = make_wav(30)  # long: only "done" can end it within the test
-    with client.websocket_connect("/ws") as ws:
+    with client.websocket_connect("/ws", headers={"host": "127.0.0.1"}) as ws:
         wait_for(lambda: hub.connected)
         t = threading.Thread(target=hub.play, args=(wav,))
         t.start()
@@ -127,7 +127,7 @@ def test_hub_play_waits_for_done(env):
 
 def test_hub_stop_sends_stop_and_unblocks(env):
     client, hub, *_ = env
-    with client.websocket_connect("/ws") as ws:
+    with client.websocket_connect("/ws", headers={"host": "127.0.0.1"}) as ws:
         wait_for(lambda: hub.connected)
         t = threading.Thread(target=hub.play, args=(make_wav(30),))
         t.start()
@@ -141,7 +141,7 @@ def test_hub_stop_sends_stop_and_unblocks(env):
 def test_hub_play_times_out(env, monkeypatch):
     monkeypatch.setattr(server, "EXTRA_WAIT", 0.05)
     client, hub, *_ = env
-    with client.websocket_connect("/ws") as ws:
+    with client.websocket_connect("/ws", headers={"host": "127.0.0.1"}) as ws:
         wait_for(lambda: hub.connected)
         t = threading.Thread(target=hub.play, args=(make_wav(),))
         t.start()
@@ -160,7 +160,7 @@ def test_hub_play_without_overlay_returns_immediately(env):
 
 def test_hub_disconnect_clears_connected(env):
     client, hub, *_ = env
-    with client.websocket_connect("/ws"):
+    with client.websocket_connect("/ws", headers={"host": "127.0.0.1"}):
         wait_for(lambda: hub.connected)
     wait_for(lambda: not hub.connected)
 
@@ -173,7 +173,7 @@ def test_post_test_calls_speak_test(env):
 
 def test_stale_done_does_not_release_next_play(env):
     client, hub, *_ = env
-    with client.websocket_connect("/ws") as ws:
+    with client.websocket_connect("/ws", headers={"host": "127.0.0.1"}) as ws:
         wait_for(lambda: hub.connected)
         server.EXTRA_WAIT = 0.05
         try:
@@ -195,10 +195,10 @@ def test_stale_done_does_not_release_next_play(env):
 
 def test_closing_stale_socket_does_not_end_current_play(env):
     client, hub, *_ = env
-    with client.websocket_connect("/ws") as old:
+    with client.websocket_connect("/ws", headers={"host": "127.0.0.1"}) as old:
         wait_for(lambda: hub.connected)
         first = hub._ws
-        with client.websocket_connect("/ws") as new:
+        with client.websocket_connect("/ws", headers={"host": "127.0.0.1"}) as new:
             wait_for(lambda: hub._ws is not first)
             t = threading.Thread(target=hub.play, args=(make_wav(30),))
             t.start()
@@ -237,6 +237,18 @@ def test_put_returns_500_when_apply_fails():
     def boom(cfg):
         raise OSError("disk full")
 
-    with TestClient(create_app(lambda: Config(), boom, Hub(), lambda t: None)) as client:
+    with TestClient(create_app(lambda: Config(), boom, Hub(), lambda t: None), base_url="http://127.0.0.1") as client:
         r = client.put("/api/config", json=asdict(Config()))
     assert r.status_code == 500 and "disk full" in r.json()["errors"][0]
+
+
+def test_foreign_origin_host_and_non_json_rejected(env):
+    client, hub, _, spoken = env
+    evil = {"Origin": "http://evil.example", "Content-Type": "text/plain"}
+    assert client.post("/api/test", content='{"text":"x"}', headers=evil).status_code == 403
+    assert client.post("/api/test", content='{"text":"x"}', headers={"Content-Type": "text/plain"}).status_code == 403
+    assert client.get("/api/config", headers={"Host": "evil.example"}).status_code == 403
+    with pytest.raises(Exception):
+        with client.websocket_connect("/ws", headers={"host": "127.0.0.1", "origin": "http://evil.example"}):
+            pass
+    assert spoken == []
