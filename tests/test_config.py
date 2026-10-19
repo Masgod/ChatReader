@@ -44,3 +44,34 @@ def test_validate_rejects_bad_values():
     assert validate(Config(queue_size=0)) != []
     assert validate(Config(port=70000)) != []
     assert validate(Config()) == []
+
+
+def test_new_config_defaults():
+    c = Config()
+    assert (c.twitch_roles, c.youtube_roles, c.repeat_seconds, c.per_user_voices) == ([], [], 30, True)
+
+
+def test_roles_validation():
+    assert validate(Config(twitch_roles=["sub", "mod"], youtube_roles=[])) == []
+    assert any("twitch_roles" in e for e in validate(Config(twitch_roles=["owner"])))
+    assert any("youtube_roles" in e for e in validate(Config(youtube_roles=["admin"])))
+
+
+def test_repeat_seconds_validation():
+    for bad in (-1, 601):
+        assert any("repeat_seconds" in e for e in validate(Config(repeat_seconds=bad)))
+    assert validate(Config(repeat_seconds=0)) == [] and validate(Config(repeat_seconds=600)) == []
+
+
+def test_new_keys_round_trip_toml(tmp_path):
+    p = tmp_path / "c.toml"
+    cfg = Config(twitch_roles=["sub"], youtube_roles=["mod"], repeat_seconds=45, per_user_voices=False)
+    save_config(p, cfg)
+    assert load_config(p) == cfg
+
+
+def test_bad_roles_in_toml_load_defaults(tmp_path):
+    p = tmp_path / "c.toml"
+    p.write_text('twitch_roles = ["admin"]\n', encoding="utf-8")
+    assert load_config(p) == Config()
+    assert (tmp_path / "c.toml.bad").exists()

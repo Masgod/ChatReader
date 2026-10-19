@@ -5,6 +5,7 @@ from pathlib import Path
 
 import tomli_w
 
+ROLE_CHOICES = {"sub", "vip", "mod"}
 TWITCH_RE = re.compile(r"[a-z0-9_]{3,25}")
 VOICE_NAME_RE = re.compile(r"[a-z]{2}_[a-z0-9]+")
 YOUTUBE_RE = re.compile(r"[A-Za-z0-9_-]{11}")
@@ -33,6 +34,10 @@ class Config:
     speed: float = 1.0
     cpu_threads: int = 2
     youtube_channel: str = ""
+    twitch_roles: list[str] = field(default_factory=list)  # empty = read everyone
+    youtube_roles: list[str] = field(default_factory=list)
+    repeat_seconds: int = 30  # skip the same text from anyone within this many seconds; 0 = off
+    per_user_voices: bool = True
 
 
 def load_config(path: Path) -> Config:
@@ -101,6 +106,11 @@ def validate(cfg: Config) -> list[str]:
     for attr in ("voice_pt", "voice_en"):
         if not VOICE_NAME_RE.fullmatch(getattr(cfg, attr)):
             errors.append(f"{attr} must look like pf_dora")
+    for attr in ("twitch_roles", "youtube_roles"):
+        if not set(getattr(cfg, attr)) <= ROLE_CHOICES:
+            errors.append(f"{attr} must only contain sub, vip or mod")
+    if not 0 <= cfg.repeat_seconds <= 600:
+        errors.append("repeat_seconds must be between 0 and 600")
     if not 1 <= cfg.port <= 65535:
         errors.append("port must be between 1 and 65535")
     if cfg.default_lang not in ("pt", "en"):
