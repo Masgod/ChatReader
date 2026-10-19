@@ -24,6 +24,7 @@ class QueueItem:
     text: str
     lang: str
     user: str
+    voice: str = ""
 
 
 class Output(Protocol):
@@ -71,11 +72,11 @@ class Player:
     def start(self) -> None:
         self._thread.start()
 
-    def submit(self, text: str, lang: str, user: str = "") -> None:
+    def submit(self, text: str, lang: str, user: str = "", voice: str = "") -> None:
         with self._cond:
             evicted = self._queue[0] if len(self._queue) == self._queue.maxlen else None
             self._next_id += 1
-            self._queue.append(QueueItem(self._next_id, text, lang, user))
+            self._queue.append(QueueItem(self._next_id, text, lang, user, voice))
             self._cond.notify_all()
         if evicted:
             self._emit([(evicted, "dropped")])
@@ -173,7 +174,7 @@ class Player:
         """Play every sentence of an item. Returns played, failed or skipped; None on shutdown."""
         sentences = split_sentences(item.text)
         try:
-            pending = self._pool.submit(self._synth_safe, sentences[0], item.lang)
+            pending = self._pool.submit(self._synth_safe, sentences[0], item.lang, item.voice)
         except RuntimeError:
             return None  # pool already shut down
         any_audio = False
@@ -189,7 +190,7 @@ class Player:
                 if self._skip_gen != gen:
                     return "skipped"
             try:
-                nxt = self._pool.submit(self._synth_safe, sentences[i + 1], item.lang) if i + 1 < len(sentences) else None
+                nxt = self._pool.submit(self._synth_safe, sentences[i + 1], item.lang, item.voice) if i + 1 < len(sentences) else None
             except RuntimeError:
                 return None  # shutdown while this sentence was synthesizing
             if wav is not None:
@@ -206,9 +207,9 @@ class Player:
                 return "skipped"
         return "played" if any_audio else "failed"
 
-    def _synth_safe(self, text: str, lang: str) -> bytes | None:
+    def _synth_safe(self, text: str, lang: str, voice: str = "") -> bytes | None:
         try:
-            return self._synth(text, lang)
+            return self._synth(text, lang, voice)
         except Exception:
             log.exception("synthesis failed; skipping sentence")
             return None

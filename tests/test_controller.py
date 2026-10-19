@@ -18,8 +18,9 @@ class FakePlayer:
         self.paused = False
         self.pending = 0
 
-    def submit(self, text, lang, user=""):
+    def submit(self, text, lang, user="", voice=""):
         self.submitted.append((text, lang))
+        self.voices = getattr(self, "voices", []) + [voice]
         self.users = getattr(self, "users", []) + [user]
 
     def set_maxsize(self, n):
@@ -205,7 +206,7 @@ def test_pause_resume_skip_speak_test():
 def test_on_msg_exception_is_isolated():
     c, player, *_ = make()
 
-    def flaky(text, lang, user=""):
+    def flaky(text, lang, user="", voice=""):
         if "boom" in text:
             raise RuntimeError("x")
         player.submitted.append((text, lang))
@@ -350,3 +351,41 @@ def test_events_optional():
     c.on_msg(Msg("twitch", "alice", "eu gostei muito dessa jogada", 0.0))
     c.record_item_event(__import__("chatreader.player", fromlist=["QueueItem"]).QueueItem(1, "x", "pt", "u"), "played")
     assert len(player.submitted) == 1
+
+
+class VoiceTTS(FakeTTS):
+    def __init__(self, pool):
+        super().__init__()
+        self._pool = pool
+
+    def voices(self):
+        return {"pt": [{"id": v, "label": v} for v in self._pool], "en": [{"id": v, "label": v} for v in self._pool]}
+
+
+def _voiced(cfg, tts):
+    player = FakePlayer()
+    c = Controller(cfg, player, tts, {"twitch": FakeSource(), "youtube": FakeSource()})
+    return c, player
+
+
+def test_controller_attaches_voice_when_enabled():
+    from chatreader.voices import voice_for
+
+    pool = ["pf_dora", "pm_alex", "pm_santa"]
+    c, player = _voiced(Config(), VoiceTTS(pool))
+    c.on_msg(Msg("twitch", "alice", "eu gostei muito dessa jogada ontem", 0.0))
+    assert player.voices == [voice_for("twitch", "alice", sorted(pool))]
+
+
+@pytest.mark.parametrize("tts", [FakeTTS(), VoiceTTS([])])
+def test_controller_no_voice_when_pool_empty_or_missing(tts):
+    c, player = _voiced(Config(), tts)
+    c.on_msg(Msg("twitch", "alice", "eu gostei muito dessa jogada ontem", 0.0))
+    assert player.voices == [""]
+
+
+def test_controller_no_voice_when_disabled_and_for_speak_test():
+    c, player = _voiced(Config(per_user_voices=False), VoiceTTS(["pf_dora"]))
+    c.on_msg(Msg("twitch", "alice", "eu gostei muito dessa jogada ontem", 0.0))
+    c.speak_test("hello there")
+    assert player.voices == ["", ""]

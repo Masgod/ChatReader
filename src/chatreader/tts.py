@@ -65,6 +65,7 @@ class KokoroTTS:
         self._threads = cfg.cpu_threads  # read once: changing it needs a restart
         self._speed = cfg.speed
         self._voices_ok = {"pt": False, "en": False}
+        self._known: set[str] = set()
         self.model_state = "missing"  # missing | loading | ready | error
         self.reload(cfg)
 
@@ -101,7 +102,7 @@ class KokoroTTS:
                 return
             self.model_state = "ready"
         self._speed = cfg.speed
-        known = set(self._kokoro.get_voices())
+        known = self._known = set(self._kokoro.get_voices())
         chosen = {}
         self._voices_ok = {"pt": False, "en": False}
         for lang, name in (("pt", cfg.voice_pt), ("en", cfg.voice_en)):
@@ -112,11 +113,13 @@ class KokoroTTS:
                 self._voices_ok[lang] = True
         self._voice = chosen
 
-    def synth(self, text: str, lang: str) -> bytes:
-        kokoro, voice = self._kokoro, self._voice
+    def synth(self, text: str, lang: str, voice: str = "") -> bytes:
+        kokoro, voice, requested = self._kokoro, self._voice, voice
         if kokoro is None:
             raise RuntimeError("Kokoro model not loaded")
         name = voice.get(lang)
+        if requested and VOICE_NAME_RE.fullmatch(requested) and requested in self._known:
+            name = requested  # per-viewer voice; anything unknown falls back to the configured one
         if name is None:
             raise RuntimeError(f"no voice configured for {lang!r}")
         samples, rate = kokoro.create(text, voice=name, speed=self._speed, lang=LANG_CODE[lang])

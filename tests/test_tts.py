@@ -147,3 +147,24 @@ def test_voices_grouped_and_labelled(tmp_path):
 def test_voices_empty_when_model_missing(tmp_path):
     tts = KokoroTTS(tmp_path, Config(), lambda m: None, loader=lambda m, v, t: FakeKokoro())
     assert tts.voices() == {"pt": [], "en": []}
+
+
+def _ready(tmp_path, fake):
+    (tmp_path / "kokoro-v1.0.int8.onnx").write_bytes(b"x")
+    (tmp_path / "voices-v1.0.bin").write_bytes(b"x")
+    return KokoroTTS(tmp_path, Config(), lambda m: None, loader=lambda m, v, t: fake)
+
+
+def test_tts_synth_uses_given_voice(tmp_path):
+    fake = FakeKokoro()
+    tts = _ready(tmp_path, fake)
+    tts.synth("hi", "en", "af_bella")
+    assert fake.calls[-1][1] == "af_bella"
+
+
+def test_tts_synth_falls_back_on_unknown_voice(tmp_path):
+    fake = FakeKokoro()
+    tts = _ready(tmp_path, fake)
+    for bad in ("zz_nope", "", "BAD NAME"):
+        assert tts.synth("hi", "en", bad).startswith(b"RIFF")
+        assert fake.calls[-1][1] == "af_heart"

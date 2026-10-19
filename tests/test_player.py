@@ -39,7 +39,7 @@ class FakeOutput:
         self._stop.set()
 
 
-def synth(text: str, lang: str) -> bytes:
+def synth(text: str, lang: str, voice: str = "") -> bytes:
     return text.encode()
 
 
@@ -133,7 +133,7 @@ def test_skip_calls_output_stop():
 
 
 def test_synth_error_skips_message():
-    def flaky(text, lang):
+    def flaky(text, lang, voice=""):
         if text == "bad":
             raise RuntimeError("synth failed")
         return text.encode()
@@ -152,7 +152,7 @@ def test_synth_error_skips_message():
 def gated_synth(entered, release):
     """Synth that signals when item "a" starts and holds it until release is set."""
 
-    def synth(text, lang):
+    def synth(text, lang, voice=""):
         if text == "a":
             entered.set()
             release.wait(WAIT)
@@ -289,7 +289,7 @@ def test_next_sentence_synth_overlaps_playback():
     log, inflight, peak = [], [0], [0]
     lock = threading.Lock()
 
-    def slow_synth(text, lang):
+    def slow_synth(text, lang, voice=""):
         with lock:
             inflight[0] += 1
             peak[0] = max(peak[0], inflight[0])
@@ -333,7 +333,7 @@ def test_shutdown_during_prefetch_exits_cleanly():
     out.block = True
     gate = threading.Event()
 
-    def gated(text, lang):
+    def gated(text, lang, voice=""):
         if text == "B.":
             gate.wait(5)
         return text.encode()
@@ -351,7 +351,7 @@ def test_shutdown_during_prefetch_exits_cleanly():
 def test_failed_later_sentence_skips_only_it():
     out = FakeOutput()
 
-    def flaky(text, lang):
+    def flaky(text, lang, voice=""):
         if text == "B.":
             raise RuntimeError("boom")
         return text.encode()
@@ -457,7 +457,7 @@ def test_played_failed_skipped_outcomes():
     finally:
         player.shutdown()
 
-    def bad(text, lang):
+    def bad(text, lang, voice=""):
         raise RuntimeError("boom")
 
     player, out, events = _ev_player(synth_fn=bad)
@@ -485,7 +485,7 @@ def test_played_failed_skipped_outcomes():
 def test_remove_races_with_worker():
     out = FakeOutput()
 
-    def slow(text, lang):
+    def slow(text, lang, voice=""):
         time.sleep(0.002)
         return text.encode()
 
@@ -534,3 +534,30 @@ def test_shutdown_during_last_sentence_is_not_reported_played():
     assert out.started.wait(WAIT)
     player.shutdown()
     assert (1, "played") not in events
+
+
+def test_player_passes_voice_to_synth_for_every_sentence():
+    seen = []
+
+    def rec(text, lang, voice=""):
+        seen.append((text, voice))
+        return b"w"
+
+    out = FakeOutput()
+    player = Player(rec, out, maxsize=5)
+    player.start()
+    player.submit("Primeira frase aqui. Segunda frase aqui. Terceira frase aqui.", "pt", "ana", "pf_dora")
+    assert wait_until(lambda: len(out.played) == 3)
+    player.shutdown()
+    assert len(seen) == 3 and {v for _, v in seen} == {"pf_dora"}
+
+
+def test_submit_without_voice_uses_empty():
+    seen = []
+    out = FakeOutput()
+    player = Player(lambda t, l, v="": seen.append(v) or b"w", out, maxsize=5)
+    player.start()
+    player.submit("hello", "en")
+    assert wait_until(lambda: out.played)
+    player.shutdown()
+    assert seen == [""]

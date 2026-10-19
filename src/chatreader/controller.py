@@ -7,6 +7,7 @@ from chatreader.config import Config
 from chatreader.filters import FilterState, apply, explain
 from chatreader.lang import detect_lang, spoken_text
 from chatreader.models import Msg
+from chatreader.voices import voice_for
 
 log = logging.getLogger(__name__)
 
@@ -38,10 +39,20 @@ class Controller:
                 self._record(original.user, original.text, f"skipped:{reason}" if reason else "skipped")
                 return
             lang = detect_lang(msg.text, cfg.default_lang)
-            self._player.submit(spoken_text(msg, lang, cfg.announce_user), lang, msg.user)
+            voice = self._pick_voice(cfg, msg, lang)
+            self._player.submit(spoken_text(msg, lang, cfg.announce_user), lang, msg.user, voice)
             self._record(msg.user, msg.text, "queued")
         except Exception:
             log.exception("message dropped")
+
+    def _pick_voice(self, cfg: Config, msg: Msg, lang: str) -> str:
+        if not cfg.per_user_voices:
+            return ""
+        try:
+            pool = [v["id"] for v in self._tts.voices()[lang]]
+        except Exception:  # no voice list yet (model loading) or a TTS without one: use the default voice
+            return ""
+        return voice_for(msg.platform, msg.user, pool)
 
     def _record(self, user: str, text: str, outcome: str) -> None:
         if self._events is not None:

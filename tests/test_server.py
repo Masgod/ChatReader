@@ -398,7 +398,7 @@ def cc():
 def test_queue_snapshot(cc):
     client, *_ = cc
     body = client.get("/api/queue").json()
-    assert body["playing"] == {"id": 1, "text": "now", "lang": "en", "user": "ann"}
+    assert body["playing"] == {"id": 1, "text": "now", "lang": "en", "user": "ann", "voice": ""}
     assert [i["id"] for i in body["waiting"]] == [2]
 
 

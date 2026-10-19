@@ -22,7 +22,7 @@ class GatedOutput:
 
 def test_player_keeps_queue_until_overlay_connects():
     out, synthed = GatedOutput(), []
-    p = Player(lambda t, l: synthed.append(t) or b"w", out, 5)
+    p = Player(lambda t, l, v="": synthed.append(t) or b"w", out, 5)
     p.start()
     p.submit("hi", "pt")
     time.sleep(0.3)
