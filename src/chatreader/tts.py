@@ -118,10 +118,10 @@ class KokoroTTS:
         if kokoro is None:
             raise RuntimeError("Kokoro model not loaded")
         name = voice.get(lang)
-        if requested and VOICE_NAME_RE.fullmatch(requested) and requested in self._known:
-            name = requested  # per-viewer voice; anything unknown falls back to the configured one
         if name is None:
             raise RuntimeError(f"no voice configured for {lang!r}")
+        if requested and VOICE_NAME_RE.fullmatch(requested) and requested in self._known:
+            name = requested  # per-viewer voice; anything unknown falls back to the configured one
         samples, rate = kokoro.create(text, voice=name, speed=self._speed, lang=LANG_CODE[lang])
         buf = io.BytesIO()
         with wave.open(buf, "wb") as w:

@@ -168,3 +168,13 @@ def test_tts_synth_falls_back_on_unknown_voice(tmp_path):
     for bad in ("zz_nope", "", "BAD NAME"):
         assert tts.synth("hi", "en", bad).startswith(b"RIFF")
         assert fake.calls[-1][1] == "af_heart"
+
+
+def test_invalid_default_voice_still_means_language_not_spoken(tmp_path):
+    import pytest
+
+    (tmp_path / "kokoro-v1.0.int8.onnx").write_bytes(b"x")
+    (tmp_path / "voices-v1.0.bin").write_bytes(b"x")
+    tts = KokoroTTS(tmp_path, Config(voice_pt="zz_nope"), lambda m: None, loader=lambda m, v, t: FakeKokoro())
+    with pytest.raises(RuntimeError):
+        tts.synth("oi", "pt", "pf_dora")  # a per-viewer voice must not bypass the broken default
