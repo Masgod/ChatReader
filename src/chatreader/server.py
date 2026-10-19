@@ -12,7 +12,7 @@ import uvicorn
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
-from chatreader.config import Config, normalize, validate
+from chatreader.config import Config, normalize, same_type, validate
 
 READY_TIMEOUT = 5.0  # seconds run_server waits for uvicorn to start listening
 EXTRA_WAIT = 2.0  # seconds added to the WAV duration before play() gives up
@@ -124,7 +124,7 @@ def _type_errors(body) -> list[str]:
         elif isinstance(default, list):
             if not isinstance(v, list) or not all(isinstance(x, str) for x in v):
                 errors.append(f"{f.name} must be a list of strings")
-        elif type(v) is not type(default):  # exact type: bool is not int
+        elif not same_type(v, default):
             errors.append(f"{f.name} must be {type(default).__name__}")
     return errors
 

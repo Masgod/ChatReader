@@ -38,3 +38,12 @@ repeat_window = 5
 
 # Write debug-level entries to the log file (errors only otherwise).
 debug = false
+
+# Speech speed, 0.8 to 1.4.
+speed = 1.0
+
+# CPU threads used for speech, 1 to 8. Needs a restart.
+cpu_threads = 2
+
+# YouTube channel (@handle or UC... ID) to find the live stream automatically.
+youtube_channel = ""
