@@ -7,6 +7,7 @@ import pytchat
 
 from chatreader.models import Msg
 from chatreader.sources.common import run_with_backoff
+from chatreader.sources.youtube_live import resolve_live_video
 
 log = logging.getLogger(__name__)
 
@@ -55,10 +56,27 @@ def run_youtube(
     stop: threading.Event,
     on_status: Callable[[str], None],
     chat_factory: Callable[..., object] = _create_chat,
+    channel: str = "",
+    resolver: Callable[[str], str | None] = resolve_live_video,
+    poll_seconds: float = 30,
 ) -> None:
-    run_with_backoff(
-        lambda: _session(video_id, on_msg, stop, on_status, chat_factory),
-        stop,
-        on_status,
-        max_failures=5,
-    )
+    """Read chat for video_id. With only a channel, wait for its live stream, and again after it ends."""
+    follow_channel = not video_id and bool(channel)
+    while not stop.is_set():
+        if follow_channel:
+            on_status("waiting for live")
+            video_id = None
+            while not video_id:
+                video_id = resolver(channel)
+                if video_id:
+                    break
+                if stop.wait(poll_seconds):
+                    return
+        run_with_backoff(
+            lambda: _session(video_id, on_msg, stop, on_status, chat_factory),
+            stop,
+            on_status,
+            max_failures=5,
+        )
+        if not follow_channel:
+            return

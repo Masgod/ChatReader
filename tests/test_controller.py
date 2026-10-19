@@ -88,7 +88,8 @@ class FakeSource:
         self.started_evt = threading.Event()
         self.on_status = None
 
-    def __call__(self, value, on_msg, stop_event, on_status):
+    def __call__(self, value, on_msg, stop_event, on_status, **kw):
+        self.kw = kw
         self.started.append(value)
         self.on_status = on_status
         self.started_evt.set()
@@ -218,6 +219,22 @@ def test_apply_config_reloads_only_on_voice_or_speed_change():
     assert tts.reloaded == []
     c.apply_config(replace(c.cfg, speed=1.2))
     assert len(tts.reloaded) == 1
+
+
+def test_channel_only_starts_youtube_and_restarts_on_change():
+    cfg = Config(twitch_channel="", youtube_video_id="", youtube_channel="@one")
+    c, player, tts, tw, yt = make(cfg)
+    c.start()
+    try:
+        assert yt.started_evt.wait(WAIT)
+        assert yt.started == [""] and yt.kw == {"channel": "@one"}
+        assert c.snapshot()["sources"]["youtube"]["configured"] is True
+        yt.started_evt.clear()
+        c.apply_config(replace(cfg, youtube_channel="@two"))
+        assert yt.started_evt.wait(WAIT)
+        assert yt.kw == {"channel": "@two"} and tw.started == []
+    finally:
+        c.shutdown()
 
 
 def test_slow_reload_does_not_block_on_msg():

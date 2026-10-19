@@ -11,6 +11,7 @@ from chatreader.models import Msg
 log = logging.getLogger(__name__)
 
 _SOURCE_VALUE = {"twitch": "twitch_channel", "youtube": "youtube_video_id"}
+_SOURCE_EXTRA = {"youtube": "youtube_channel"}  # extra setting that can start a source on its own
 _JOIN_TIMEOUT = 1.0
 
 
@@ -49,8 +50,8 @@ class Controller:
             old, self.cfg = self.cfg, new
             if new.repeat_window != old.repeat_window:
                 self._filter_state = FilterState(size=new.repeat_window)
-            for name, attr in _SOURCE_VALUE.items():
-                if getattr(new, attr) != getattr(old, attr):
+            for name in _SOURCE_VALUE:
+                if self._source_key(new, name) != self._source_key(old, name):
                     to_join.append(self._stop_source(name))
                     self._start_source(name)
         self._join(to_join)
@@ -78,8 +79,8 @@ class Controller:
 
         cfg = self.cfg
         sources = {
-            name: {"configured": bool(getattr(cfg, attr)), "state": self._status[name]}
-            for name, attr in _SOURCE_VALUE.items()
+            name: {"configured": any(self._source_key(cfg, name)), "state": self._status[name]}
+            for name in _SOURCE_VALUE
         }
         overlay = part(lambda: bool(getattr(getattr(self._player, "_output", None), "connected", False)), False)
         return {
@@ -115,6 +116,11 @@ class Controller:
         self._player.shutdown()
 
     @staticmethod
+    def _source_key(cfg: Config, name: str) -> tuple[str, str]:
+        extra = getattr(cfg, _SOURCE_EXTRA[name]) if name in _SOURCE_EXTRA else ""
+        return getattr(cfg, _SOURCE_VALUE[name]), extra
+
+    @staticmethod
     def _join(threads) -> None:
         for thread in threads:
             if thread is not None and thread is not threading.current_thread():
@@ -122,9 +128,10 @@ class Controller:
 
     # callers hold self._lock
     def _start_source(self, name: str) -> None:
-        value = getattr(self.cfg, _SOURCE_VALUE[name])
-        if not value:
+        value, extra = self._source_key(self.cfg, name)
+        if not (value or extra):
             return
+        kwargs = {"channel": extra} if name in _SOURCE_EXTRA else {}
         stop = threading.Event()
 
         def on_status(text: str) -> None:
@@ -133,7 +140,7 @@ class Controller:
 
         def run() -> None:
             try:
-                self._factories[name](value, self.on_msg, stop, on_status)
+                self._factories[name](value, self.on_msg, stop, on_status, **kwargs)
             except Exception:
                 log.exception("%s source crashed", name)
                 on_status("error")

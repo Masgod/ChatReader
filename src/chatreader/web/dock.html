@@ -52,7 +52,7 @@
 </div>
 
 <div class="card">
-  <label for="yt-input">YouTube video link or ID
+  <label for="yt-input">YouTube video link or ID, or channel @handle
     <input type="text" id="yt-input" autocomplete="off" spellcheck="false" placeholder="youtube.com/watch?v=…">
   </label>
   <div class="err-text" id="yt-err" role="alert"></div>
@@ -114,10 +114,10 @@ $("btn-test").onclick = async () => {
   post("/api/test", { text: SAMPLES[cfg.default_lang] || SAMPLES.pt });
 };
 
-async function saveKey(key, value, errBox) {
+async function saveKeys(changes, errBox) {
   errBox.textContent = "";
   const cfg = await (await fetch("/api/config")).json();
-  cfg[key] = value;
+  Object.assign(cfg, changes);
   const r = await fetch("/api/config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cfg) });
   if (!r.ok) {
     const body = await r.json().catch(() => ({}));
@@ -127,10 +127,15 @@ async function saveKey(key, value, errBox) {
 }
 
 $("speed-input").oninput = (e) => { $("speed-val").textContent = Number(e.target.value).toFixed(2).replace(/0$/, "") + "×"; };
-$("speed-input").onchange = (e) => saveKey("speed", Number(e.target.value), $("speed-err"));
-$("yt-input").onchange = (e) => saveKey("youtube_video_id", e.target.value.trim(), $("yt-err"));
+$("speed-input").onchange = (e) => saveKeys({ speed: Number(e.target.value) }, $("speed-err"));
+$("yt-input").onchange = (e) => {
+  const v = e.target.value.trim();
+  // a channel (@handle, UC... ID or channel link) is followed automatically; a video link or ID is used as is
+  const isChannel = /^@|^UC[\w-]{22}$|youtube\.com\/(@|channel\/)/.test(v);
+  saveKeys(isChannel ? { youtube_channel: v, youtube_video_id: "" } : { youtube_video_id: v }, $("yt-err"));
+};
 
-fetch("/api/config").then((r) => r.json()).then((c) => { $("yt-input").value = c.youtube_video_id || ""; $("speed-input").value = c.speed; $("speed-val").textContent = Number(c.speed).toFixed(2).replace(/0$/, "") + "×"; }).catch(() => {});
+fetch("/api/config").then((r) => r.json()).then((c) => { $("yt-input").value = c.youtube_video_id || c.youtube_channel || ""; $("speed-input").value = c.speed; $("speed-val").textContent = Number(c.speed).toFixed(2).replace(/0$/, "") + "×"; }).catch(() => {});
 poll();
 setInterval(poll, 1000);
 </script>
