@@ -81,6 +81,13 @@ class Hub:
                 self._done.set()
 
 
+_STATIC = {
+    "app.css": "text/css",
+    "app.js": "text/javascript",
+    "live.js": "text/javascript",
+    "console.js": "text/javascript",
+    "settings.js": "text/javascript",
+}
 _LOCAL_HOSTS = {"127.0.0.1", "localhost", "[::1]"}
 
 
@@ -149,13 +156,17 @@ def create_app(
     def overlay():
         return _page("overlay.html")
 
-    @app.get("/settings")
-    def settings():
-        return _page("settings.html")
-
+    @app.get("/")
     @app.get("/dock")
-    def dock():
-        return _page("dock.html")
+    @app.get("/settings")
+    def app_page():
+        return _page("app.html")
+
+    @app.get("/static/{name}")
+    def static_file(name: str):
+        if name not in _STATIC:
+            return Response(status_code=404)
+        return Response((resources.files("chatreader") / "web" / name).read_bytes(), media_type=_STATIC[name])
 
     @app.get("/api/status")
     def read_status():

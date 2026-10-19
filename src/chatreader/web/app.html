@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChatReader</title>
+<link rel="stylesheet" href="/static/app.css">
+
+<header class="top">
+  <div class="logo" aria-hidden="true">c</div>
+  <h1>ChatReader</h1>
+  <div id="status"><span id="dot"></span><span id="status-text">loading…</span></div>
+</header>
+<div id="banner" role="alert" hidden>ChatReader not reachable</div>
+
+<nav class="tabs" role="tablist" aria-label="Sections">
+  <button type="button" role="tab" id="tab-live" aria-controls="panel-live" data-tab="live">Live</button>
+  <button type="button" role="tab" id="tab-console" aria-controls="panel-console" data-tab="console">Console</button>
+  <button type="button" role="tab" id="tab-settings" aria-controls="panel-settings" data-tab="settings">Settings</button>
+</nav>
+
+<main>
+  <section id="panel-live" role="tabpanel" aria-labelledby="tab-live" hidden>
+    <div class="live-cols">
+      <div class="col">
+        <div class="card" aria-label="Status">
+          <div class="srow"><span class="dot" id="d-twitch"></span><span class="name">Twitch</span><span class="state" id="st-twitch">…</span></div>
+          <div class="srow"><span class="dot" id="d-youtube"></span><span class="name">YouTube</span><span class="state" id="st-youtube">…</span></div>
+          <div class="srow"><span class="dot" id="d-overlay"></span><span class="name">OBS overlay</span><span class="state" id="st-overlay">…</span></div>
+          <div class="srow"><span class="dot" id="d-model"></span><span class="name">Voice model</span><span class="state" id="st-model">…</span></div>
+        </div>
+        <div class="btns">
+          <button type="button" class="btn" id="btn-pause">Pause</button>
+          <button type="button" class="btn" id="btn-skip">Skip</button>
+          <button type="button" class="btn" id="btn-copy">Copy overlay URL</button>
+          <button type="button" class="btn danger" id="btn-quit">Quit</button>
+        </div>
+        <input type="text" id="overlay-url" class="mono-field" readonly hidden aria-label="Overlay URL (copy this)">
+        <div id="live-msg" class="note" role="status"></div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <div class="card-head"><h2>Queue <small id="queue-count"></small></h2><button type="button" class="btn small" id="btn-clear">Clear all</button></div>
+          <ul id="queue-list" class="queue"></ul>
+          <div id="queue-empty" class="empty">Nothing waiting.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-console" role="tabpanel" aria-labelledby="tab-console" hidden>
+    <div class="toolbar">
+      <div class="chips-row" role="group" aria-label="Show">
+        <button type="button" class="pill" id="filter-all" aria-pressed="true">All</button>
+        <button type="button" class="pill" id="filter-chat" aria-pressed="false">Chat</button>
+        <button type="button" class="pill" id="filter-log" aria-pressed="false">Log</button>
+      </div>
+      <label class="inline"><span id="l-debug">Debug</span>
+        <button type="button" class="sw" role="switch" id="toggle-debug" aria-labelledby="l-debug" aria-checked="false"></button></label>
+      <button type="button" class="btn small" id="btn-pause-scroll">Pause scrolling</button>
+      <button type="button" class="btn small" id="btn-clear-view">Clear view</button>
+    </div>
+    <div class="console-wrap">
+      <div id="console-lines" class="console" role="log" aria-live="off" tabindex="0" aria-label="Chat activity and app log"></div>
+      <button type="button" class="btn jump" id="btn-jump" hidden>Jump to latest</button>
+    </div>
+  </section>
+
+  <section id="panel-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+    <ul id="errors" role="alert"></ul>
+
+    <div id="checklist" class="card pad" aria-label="Setup checklist" hidden>
+      <div class="name">Getting started</div>
+      <ul class="chk">
+        <li id="chk-model"><span class="mark" aria-hidden="true">○</span> Voice model ready</li>
+        <li id="chk-source"><span class="mark" aria-hidden="true">○</span> Twitch channel or YouTube video set</li>
+        <li id="chk-overlay"><span class="mark" aria-hidden="true">○</span> OBS overlay connected (add the Browser Source, see the guide)</li>
+      </ul>
+    </div>
+
+    <details class="sect" open>
+      <summary><h2>Sources</h2></summary>
+      <div class="card">
+        <label class="row grid">
+          <div><div class="name">Twitch channel</div><div class="hint">Channel name only</div></div>
+          <div class="field prefixed"><span>twitch.tv/</span>
+            <input type="text" id="twitch_channel" data-key="twitch_channel" placeholder="yourchannel" autocomplete="off" spellcheck="false"></div>
+        </label>
+        <label class="row grid">
+          <div><div class="name">YouTube video</div><div class="hint">Video ID or URL</div></div>
+          <div class="field"><input type="text" id="youtube_video_id" data-key="youtube_video_id" placeholder="youtube.com/watch?v=…" autocomplete="off" spellcheck="false"></div>
+        </label>
+        <label class="row grid">
+          <div><div class="name">YouTube channel</div><div class="hint">@handle · finds your live stream</div></div>
+          <div class="field"><input type="text" id="youtube_channel" data-key="youtube_channel" placeholder="@yourchannel" autocomplete="off" spellcheck="false"></div>
+        </label>
+      </div>
+    </details>
+
+    <details class="sect" open>
+      <summary><h2>Voices</h2></summary>
+      <div class="card">
+        <div class="row grid">
+          <div><div class="name">Default language</div><div class="hint">Used when detection is unsure</div></div>
+          <div class="field seg" role="group" aria-label="Default language">
+            <button type="button" data-lang="pt">Português</button>
+            <button type="button" data-lang="en">English</button>
+          </div>
+        </div>
+        <div class="row grid">
+          <label for="voice_pt"><div class="name">Portuguese voice</div><div class="hint">Kokoro voice</div></label>
+          <div class="pick">
+            <div class="field grow" id="wrap-voice_pt"><select id="voice_pt" data-key="voice_pt" data-voice="pt"></select></div>
+            <button type="button" class="btn icon" data-preview="pt" title="Preview the saved Portuguese voice" aria-label="Preview Portuguese voice">▶</button>
+          </div>
+        </div>
+        <div class="row grid">
+          <label for="voice_en"><div class="name">English voice</div><div class="hint">Kokoro voice</div></label>
+          <div class="pick">
+            <div class="field grow" id="wrap-voice_en"><select id="voice_en" data-key="voice_en" data-voice="en"></select></div>
+            <button type="button" class="btn icon" data-preview="en" title="Preview the saved English voice" aria-label="Preview English voice">▶</button>
+          </div>
+        </div>
+        <label class="row grid">
+          <div><div class="name">Speed</div><div class="hint" id="speed-val">1.0×</div></div>
+          <input type="range" id="speed" data-key="speed" data-type="number" min="0.8" max="1.4" step="0.05" aria-label="Speech speed">
+        </label>
+      </div>
+    </details>
+
+    <details class="sect" open>
+      <summary><h2>Reading</h2></summary>
+      <div class="card">
+        <div class="row">
+          <div class="txt"><div class="name" id="l-announce">Announce user name</div><div class="hint">Say “viewer says…” before each message</div></div>
+          <button type="button" class="sw" role="switch" aria-labelledby="l-announce" data-toggle="announce_user"></button>
+        </div>
+        <div class="row">
+          <div class="txt"><div class="name">Queue size</div><div class="hint">Older messages drop when full</div></div>
+          <div class="field step" data-num="queue_size" data-min="1" data-max="200" data-step="1">
+            <button type="button" data-d="-1" aria-label="Decrease queue size">−</button>
+            <input type="text" id="queue_size" inputmode="numeric" aria-label="Queue size">
+            <button type="button" data-d="1" aria-label="Increase queue size">+</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="txt"><div class="name">Max characters</div><div class="hint">Longer messages are cut off</div></div>
+          <div class="field step" data-num="max_chars" data-min="20" data-max="1000" data-step="10">
+            <button type="button" data-d="-1" aria-label="Decrease max characters">−</button>
+            <input type="text" id="max_chars" inputmode="numeric" aria-label="Max characters">
+            <button type="button" data-d="1" aria-label="Increase max characters">+</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="txt"><div class="name">Repeat window</div><div class="hint">Skip identical messages within</div></div>
+          <div class="field step" data-num="repeat_window" data-min="0" data-max="50" data-step="1">
+            <button type="button" data-d="-1" aria-label="Decrease repeat window">−</button>
+            <input type="text" id="repeat_window" inputmode="numeric" aria-label="Repeat window">
+            <button type="button" data-d="1" aria-label="Increase repeat window">+</button>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="sect" open>
+      <summary><h2>Ignored users <small id="ignored-count"></small></h2></summary>
+      <div class="card pad">
+        <div class="chips" id="chips"></div>
+        <form class="add" id="add">
+          <div class="field grow"><input type="text" id="new-user" placeholder="Add a username, e.g. fossabot" autocomplete="off" spellcheck="false" aria-label="Username to ignore"></div>
+          <button type="submit" class="btn">Add</button>
+        </form>
+      </div>
+    </details>
+
+    <details class="sect" open>
+      <summary><h2>System</h2></summary>
+      <div class="card">
+        <label class="row">
+          <div class="txt"><div class="name">Port</div><div class="hint" id="port-hint">Local server · restart required to change</div></div>
+          <div class="field"><input type="text" id="port" inputmode="numeric" aria-label="Port"></div>
+        </label>
+        <div class="row">
+          <div class="txt"><div class="name">CPU threads</div><div class="hint" id="threads-hint">Used for speech · restart required to change</div></div>
+          <div class="field step" data-num="cpu_threads" data-min="1" data-max="8" data-step="1">
+            <button type="button" data-d="-1" aria-label="Decrease CPU threads">−</button>
+            <input type="text" id="cpu_threads" inputmode="numeric" aria-label="CPU threads">
+            <button type="button" data-d="1" aria-label="Increase CPU threads">+</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="txt"><div class="name" id="l-startup">Start with Windows</div><div class="hint">Launch minimized on sign-in</div></div>
+          <button type="button" class="sw" role="switch" aria-labelledby="l-startup" data-toggle="start_with_windows"></button>
+        </div>
+        <div class="row">
+          <div class="txt"><div class="name" id="l-debug2">Debug</div><div class="hint">Write verbose logs</div></div>
+          <button type="button" class="sw" role="switch" aria-labelledby="l-debug2" data-toggle="debug"></button>
+        </div>
+      </div>
+    </details>
+
+    <div class="savebar">
+      <div id="msg" role="status"></div>
+      <div class="btns-end">
+        <button type="button" class="btn" id="btn-test">Test voice</button>
+        <button type="button" class="btn primary" id="btn-save" disabled>Save</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+<script src="/static/live.js"></script>
+<script src="/static/console.js"></script>
+<script src="/static/settings.js"></script>
+</html>

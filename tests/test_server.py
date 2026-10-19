@@ -288,27 +288,72 @@ def test_control_rejects_bad_requests(env):
     assert hub.actions == []
 
 
-def test_dock_page_has_required_controls(env):
+def _ids(body, idents):
+    for ident in idents:
+        assert f'id="{ident}"' in body, ident
+
+
+def test_app_page_has_shell(env):
     client, *_ = env
-    body = client.get("/dock").text
-    for ident in ("st-twitch", "st-youtube", "st-overlay", "st-model", "btn-pause", "btn-skip", "btn-test", "yt-input"):
-        assert f'id="{ident}"' in body
-    assert 'href="/settings"' in body
+    _ids(client.get("/").text, ("tab-live", "tab-console", "tab-settings", "panel-live", "panel-console",
+                                "panel-settings", "status-text", "banner"))
 
 
-def test_settings_page_has_checklist(env):
+def test_dock_and_settings_serve_app(env):
     client, *_ = env
-    body = client.get("/settings").text
-    for ident in ("checklist", "chk-model", "chk-source", "chk-overlay"):
-        assert f'id="{ident}"' in body
+    assert client.get("/dock").text == client.get("/settings").text == client.get("/").text
 
 
-def test_pages_have_speed_controls(env):
+def test_static_whitelist(env):
     client, *_ = env
-    settings = client.get("/settings").text
-    assert 'data-num="speed"' in settings or 'id="speed"' in settings
-    assert 'id="cpu_threads"' in settings or 'data-num="cpu_threads"' in settings
-    assert 'id="speed-input"' in client.get("/dock").text
+    assert client.get("/static/app.js").headers["content-type"].startswith(("text/javascript", "application/javascript"))
+    assert client.get("/static/app.css").headers["content-type"].startswith("text/css")
+    for name in ("live.js", "console.js", "settings.js"):
+        assert client.get(f"/static/{name}").status_code == 200
+    for bad in ("../server.py", "nope.js", "%2e%2e%2fconfig.py", "app.html", "..%5cserver.py"):
+        assert client.get(f"/static/{bad}").status_code == 404
+
+
+def test_web_js_never_uses_innerhtml():
+    from importlib import resources
+
+    web = resources.files("chatreader") / "web"
+    files = [f for f in web.iterdir() if f.name.endswith(".js")]
+    assert files
+    for f in files:
+        assert "innerHTML" not in f.read_text("utf-8"), f.name
+
+
+def test_live_panel_has_controls(env):
+    client, *_ = env
+    body = client.get("/").text
+    _ids(body, ("st-twitch", "st-youtube", "st-overlay", "st-model", "btn-pause", "btn-skip", "btn-copy",
+                "btn-quit", "queue-list", "btn-clear"))
+    assert 'src="/static/live.js"' in body
+
+
+def test_console_panel_has_controls(env):
+    client, *_ = env
+    body = client.get("/").text
+    _ids(body, ("console-lines", "filter-all", "filter-chat", "filter-log", "toggle-debug", "btn-pause-scroll",
+                "btn-clear-view", "btn-jump"))
+    assert 'src="/static/console.js"' in body
+
+
+def test_settings_panel_has_fields(env):
+    client, *_ = env
+    body = client.get("/").text
+    _ids(body, ("voice_pt", "voice_en", "speed", "cpu_threads", "youtube_channel", "twitch_channel",
+                "youtube_video_id", "queue_size", "max_chars", "repeat_window", "port", "btn-save", "btn-test",
+                "checklist", "chk-model", "chk-source", "chk-overlay"))
+    assert 'src="/static/settings.js"' in body
+
+
+def test_old_page_files_removed():
+    from importlib import resources
+
+    web = resources.files("chatreader") / "web"
+    assert not (web / "settings.html").is_file() and not (web / "dock.html").is_file()
 
 
 # ---- control-center endpoints ----
