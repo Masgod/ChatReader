@@ -4,12 +4,12 @@ import struct
 import threading
 import time
 import wave
-from dataclasses import asdict, fields
+from dataclasses import asdict, fields, is_dataclass
 from importlib import resources
 from typing import Callable
 
 import uvicorn
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import BackgroundTasks, FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 from chatreader.config import Config, normalize, same_type, validate
@@ -136,6 +136,11 @@ def create_app(
     speak_test: Callable[[str], None],
     get_status: Callable[[], dict],
     control: Callable[[str], None],
+    *,
+    queue=None,  # object with snapshot() / remove(id) / clear()
+    events=None,  # EventLog
+    toggle: Callable[[str, bool], None] | None = None,
+    voices: Callable[[], dict] | None = None,
 ) -> FastAPI:
     app = FastAPI()
     app.add_middleware(LocalOnly)
@@ -159,17 +164,79 @@ def create_app(
         except Exception as e:
             return {"error": str(e)}
 
-    @app.post("/api/control")
-    async def post_control(request: Request):
+    async def json_body(request: Request):
         try:
             body = await request.json()
         except ValueError:
-            body = None
-        action = body.get("action") if isinstance(body, dict) else None
-        if action not in ("pause", "resume", "skip"):
-            return JSONResponse({"errors": ["action must be pause, resume or skip"]}, status_code=422)
-        control(action)
+            return None
+        return body if isinstance(body, dict) else None
+
+    def unavailable():
+        return JSONResponse({"errors": ["not available"]}, status_code=503)
+
+    def plain(x):
+        return asdict(x) if is_dataclass(x) else x
+
+    @app.post("/api/control")
+    async def post_control(request: Request, background: BackgroundTasks):
+        body = await json_body(request)
+        action = body.get("action") if body else None
+        if action not in ("pause", "resume", "skip", "quit"):
+            return JSONResponse({"errors": ["action must be pause, resume, skip or quit"]}, status_code=422)
+        if action == "quit":
+            background.add_task(control, action)  # runs after the response is sent
+        else:
+            control(action)
         return {"ok": True}
+
+    @app.get("/api/queue")
+    def read_queue():
+        if queue is None:
+            return unavailable()
+        snap = queue.snapshot()
+        return {"playing": plain(snap["playing"]), "waiting": [plain(i) for i in snap["waiting"]]}
+
+    @app.post("/api/queue/remove")
+    async def remove_queued(request: Request):
+        if queue is None:
+            return unavailable()
+        body = await json_body(request)
+        item_id = body.get("id") if body else None
+        if type(item_id) is not int:
+            return JSONResponse({"errors": ["id must be an integer"]}, status_code=422)
+        if not queue.remove(item_id):
+            return JSONResponse({"errors": ["not in the queue"]}, status_code=404)
+        return {"ok": True}
+
+    @app.post("/api/queue/clear")
+    async def clear_queue():
+        if queue is None:
+            return unavailable()
+        return {"removed": queue.clear()}
+
+    @app.get("/api/events")
+    def read_events(since: str = "0"):
+        if events is None:
+            return unavailable()
+        try:
+            n = max(0, int(since))
+        except ValueError:
+            n = 0
+        return events.since(n)
+
+    @app.post("/api/toggle")
+    async def post_toggle(request: Request):
+        if toggle is None:
+            return unavailable()
+        body = await json_body(request)
+        if not body or body.get("name") != "debug" or type(body.get("value")) is not bool:
+            return JSONResponse({"errors": ["expected name 'debug' and a boolean value"]}, status_code=422)
+        await asyncio.to_thread(toggle, "debug", body["value"])
+        return {"ok": True}
+
+    @app.get("/api/voices")
+    def read_voices():
+        return unavailable() if voices is None else voices()
 
     @app.get("/api/config")
     def read_config():

@@ -309,3 +309,108 @@ def test_pages_have_speed_controls(env):
     assert 'data-num="speed"' in settings or 'id="speed"' in settings
     assert 'id="cpu_threads"' in settings or 'data-num="cpu_threads"' in settings
     assert 'id="speed-input"' in client.get("/dock").text
+
+
+# ---- control-center endpoints ----
+
+class FakeQueue:
+    def __init__(self):
+        from chatreader.player import QueueItem
+
+        self.playing = QueueItem(1, "now", "en", "ann")
+        self.waiting = [QueueItem(2, "next", "pt", "bob")]
+        self.cleared = 0
+
+    def snapshot(self):
+        return {"playing": self.playing, "waiting": list(self.waiting)}
+
+    def remove(self, item_id):
+        before = len(self.waiting)
+        self.waiting = [i for i in self.waiting if i.id != item_id]
+        return len(self.waiting) < before
+
+    def clear(self):
+        n, self.waiting = len(self.waiting), []
+        return n
+
+
+@pytest.fixture
+def cc():
+    from chatreader.events import EventLog
+
+    events, toggles, actions = EventLog(), [], []
+    q = FakeQueue()
+    app = create_app(
+        lambda: Config(), lambda c: None, Hub(), lambda t: None, lambda: {}, actions.append,
+        queue=q, events=events, toggle=lambda n, v: toggles.append((n, v)),
+        voices=lambda: {"pt": [{"id": "pf_dora", "label": "Dora (female)"}], "en": []},
+    )
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        yield client, q, events, toggles, actions
+
+
+def test_queue_snapshot(cc):
+    client, *_ = cc
+    body = client.get("/api/queue").json()
+    assert body["playing"] == {"id": 1, "text": "now", "lang": "en", "user": "ann"}
+    assert [i["id"] for i in body["waiting"]] == [2]
+
+
+def test_queue_remove_ok_and_404(cc):
+    client, q, *_ = cc
+    assert client.post("/api/queue/remove", json={"id": 2}).json() == {"ok": True}
+    assert client.post("/api/queue/remove", json={"id": 2}).status_code == 404
+
+
+@pytest.mark.parametrize("body", [{}, {"id": "x"}, {"id": True}, [1], {"id": 1.5}])
+def test_queue_remove_bad_body(cc, body):
+    client, *_ = cc
+    assert client.post("/api/queue/remove", json=body).status_code == 422
+
+
+def test_queue_clear(cc):
+    client, *_ = cc
+    assert client.post("/api/queue/clear", json={}).json() == {"removed": 1}
+
+
+def test_events_since_and_bad_since(cc):
+    client, _, events, *_ = cc
+    events.add("app", "info", message="a")
+    events.add("app", "info", message="b")
+    assert [e["message"] for e in client.get("/api/events?since=1").json()["events"]] == ["b"]
+    for bad in ("abc", "-5", "", "1e9999", "99999999999999999999"):
+        r = client.get(f"/api/events?since={bad}")
+        assert r.status_code == 200 and r.json()["last"] == 2
+
+
+def test_toggle_debug_and_unknown(cc):
+    client, _, _, toggles, _ = cc
+    assert client.post("/api/toggle", json={"name": "debug", "value": True}).json() == {"ok": True}
+    assert toggles == [("debug", True)]
+    assert client.post("/api/toggle", json={"name": "other", "value": True}).status_code == 422
+    assert client.post("/api/toggle", json={"name": "debug", "value": "yes"}).status_code == 422
+
+
+def test_voices(cc):
+    client, *_ = cc
+    assert client.get("/api/voices").json()["pt"][0]["id"] == "pf_dora"
+
+
+def test_quit_calls_control_after_response(cc):
+    client, *_, actions = cc
+    assert client.post("/api/control", json={"action": "quit"}).json() == {"ok": True}
+    assert actions == ["quit"]
+
+
+def test_new_routes_503_without_deps(env):
+    client, *_ = env
+    for path in ("/api/queue", "/api/events", "/api/voices"):
+        assert client.get(path).status_code == 503
+    assert client.post("/api/queue/clear", json={}).status_code == 503
+    assert client.post("/api/toggle", json={"name": "debug", "value": True}).status_code == 503
+
+
+def test_new_routes_reject_foreign_origin(cc):
+    client, *_ = cc
+    assert client.post("/api/queue/clear", json={}, headers={"Origin": "http://evil.com"}).status_code == 403
+    assert client.post("/api/queue/clear", content="{}", headers={"Content-Type": "text/plain"}).status_code == 403
