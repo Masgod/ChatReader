@@ -1,24 +1,24 @@
 # ChatReader
 
-A Windows tray app that reads Twitch and YouTube live chat aloud, in Portuguese (BR) and English. Speech is generated locally on the CPU with [Piper](https://github.com/rhasspy/piper). Audio reaches the stream through an OBS Browser Source.
+A Windows tray app that reads Twitch and YouTube live chat aloud, in Portuguese (BR) and English. Speech is generated locally on the CPU with [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) (via `kokoro-onnx`). Audio reaches the stream through an OBS Browser Source.
 
 Status: early version (0.1.0). The automated tests pass; the manual checks listed under "Still to verify" are not done yet.
 
 ## Voice licences
 
-**Read this before using ChatReader on a monetized stream.**
+The engine is Kokoro-82M. Its code (`kokoro-onnx`, MIT) and weights (Apache-2.0) are permissively licensed, and the model card says it was trained on permissive or non-copyrighted audio.
 
-- `en_US-lessac-medium`: its model card points to the Lessac Blizzard 2013 Research Licence. It is for research purposes only, does not allow commercial use, and clause 7 restricts distribution. https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html
-- `pt_BR-faber-medium`: the dataset is CC0 (OHF-Voice/voice-datasets), but its model card says the voice was finetuned from the US English lessac voice, so it may inherit that restriction.
-- The `rhasspy/piper-voices` README says MIT, but the individual model cards do not repeat the Lessac restriction. The legal status for a monetized stream is unclear.
+- Not verified: where the training data of the individual Portuguese voices (`pf_dora`, `pm_alex`, `pm_santa`) comes from. The VOICES.md file does not document it. Ask the author (hexgrad) or get written legal advice before relying on it for a monetized stream.
+- Phonemes come from espeak-ng (GPL-3.0+) through `kokoro-onnx`. This matters if you redistribute the app, not for the generated audio. This is not legal advice.
+- An earlier version used Piper voices. Those were dropped because `en_US-lessac-medium` is under a research-only licence and the Portuguese Piper voices are finetuned from it.
 
-Do not use these voices commercially without checking the licences yourself. Voices can be swapped in the settings page (`voice_pt`, `voice_en`). Voice files are downloaded at runtime and are never committed (`voices/` is git-ignored).
+Voices can be swapped in the settings page (`voice_pt`, `voice_en`). Model files are downloaded at runtime and are never committed (`voices/` is git-ignored).
 
 ## Requirements
 
 - Windows 10 or 11
 - Python 3.11 or newer, and [uv](https://docs.astral.sh/uv/)
-- Internet access for chat and for the first-run voice download
+- Internet access for chat and for the first-run model download
 
 ## Install
 
@@ -42,7 +42,7 @@ pythonw -m chatreader
 
 On first run the app:
 
-- downloads the two Piper voices (`pt_BR-faber-medium`, `en_US-lessac-medium`) into `voices/`,
+- downloads the Kokoro model (about 120 MB: `kokoro-v1.0.int8.onnx` and `voices-v1.0.bin`) into `voices/`,
 - creates `config.toml` with the default values,
 - opens the settings page in your browser.
 
@@ -78,8 +78,8 @@ The file uses the defaults below when a key is missing. Keys that are not known 
 |---|---|---|
 | `twitch_channel` | `""` | Twitch channel name without `#`. Empty disables Twitch. |
 | `youtube_video_id` | `""` | YouTube live video ID or URL (a URL is reduced to the ID). Empty disables YouTube. |
-| `voice_pt` | `"pt_BR-faber-medium"` | Piper voice for Portuguese messages. |
-| `voice_en` | `"en_US-lessac-medium"` | Piper voice for English messages. |
+| `voice_pt` | `"pf_dora"` | Kokoro voice for Portuguese messages (`pf_dora`, `pm_alex`, `pm_santa`). |
+| `voice_en` | `"af_heart"` | Kokoro voice for English messages (for example `af_heart`, `af_bella`, `am_michael`). |
 | `default_lang` | `"pt"` | Language used when detection is unsure or the text is under 12 characters. `"pt"` or `"en"`. |
 | `queue_size` | `20` | Messages waiting to be spoken. When full, the oldest waiting message is dropped. |
 | `max_chars` | `200` | Longer messages are cut at a word boundary. |
@@ -97,7 +97,7 @@ The file uses the defaults below when a key is missing. Keys that are not known 
 1. The Twitch source (anonymous IRC over WebSocket) and the YouTube source (`pytchat`) each run in a thread. Each reconnects with backoff, from 1 s up to 30 s.
 2. Filters drop bots and ignored users, `!commands`, links, repeats, and spam (a run of 10 or more identical characters, or one token making up 60% or more of a message of four or more tokens). The rest is truncated to `max_chars`.
 3. `lingua` picks Portuguese or English (confidence at least 0.7, otherwise `default_lang`). The text becomes "<user> disse: ..." or "<user> says: ...".
-4. A bounded queue feeds one worker thread, which synthesizes the text with Piper on the CPU.
+4. A bounded queue feeds one worker thread, which synthesizes the text with Kokoro on the CPU (2 threads).
 5. The WAV goes to the overlay over a local WebSocket. The overlay plays it and replies `done`. The worker waits for that reply (clip length plus 2 s) before the next clip, so lines never overlap.
 
 ## Verified
@@ -125,7 +125,7 @@ The following checks need live chat, OBS and a running game. They have not been 
 ## Known limits and risks
 
 - `pytchat` scrapes YouTube and can break when YouTube changes. `sources/youtube.py` is isolated. The official YouTube API is a possible fallback; it is not implemented.
-- Piper pt-BR voices are few (`faber` medium, `edresson` low) and sound robotic.
-- Windows CPU use has not been measured, and no real-time benchmarks were found for Piper.
+- Measured on this PC with 2 CPU threads: about 0.65 s of compute per second of audio, so a 3 s message takes about 2 s to synthesize. It keeps up in steady state but adds latency. The thread count is `THREADS` in `tts.py`.
+- CPU use while a game runs has not been measured.
 - Runs of 10 or more identical characters (for example "kkkkkkkkkk") are dropped as spam.
 - Only one overlay connection is supported. A second connection takes over the audio.

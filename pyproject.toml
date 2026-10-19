@@ -1,10 +1,10 @@
 [project]
 name = "chatreader"
 version = "0.1.0"
-description = "Windows tray app that reads Twitch and YouTube chat aloud with Piper TTS"
+description = "Windows tray app that reads Twitch and YouTube chat aloud with Kokoro TTS"
 requires-python = ">=3.11"
 dependencies = [
-    "piper-tts",
+    "kokoro-onnx",
     "lingua-language-detector",
     "pytchat",
     "websockets",
@@ -36,4 +36,4 @@ packages = ["src/chatreader"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["slow: needs downloaded Piper voices in ./voices"]
+markers = ["slow: needs downloaded Kokoro model files in ./voices"]
