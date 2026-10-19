@@ -91,3 +91,100 @@ def test_explain_repeat_and_no_history_side_effect():
 )
 def test_explain_agrees_with_apply(msg):
     assert (explain(msg, Config(), FilterState(5)) is None) == (apply(msg, Config(), FilterState(5)) is not None)
+
+
+# ---- roles and duplicates ----
+
+from chatreader.filters import explain  # noqa: E402
+
+
+def r(text="hello there friend", user="alice", platform="twitch", roles=(), ts=0.0):
+    return Msg(platform, user, text, ts, frozenset(roles))
+
+
+def test_role_filter_empty_reads_everyone():
+    assert explain(r(), Config(), FilterState(5)) is None
+
+
+def test_role_filter_requires_listed_role():
+    cfg = Config(twitch_roles=["sub"])
+    assert explain(r(roles={"sub"}), cfg, FilterState(5)) is None
+    assert explain(r(), cfg, FilterState(5)) == "role"
+    assert explain(r(roles={"mod"}), cfg, FilterState(5)) == "role"
+
+
+def test_role_filter_is_per_platform():
+    cfg = Config(twitch_roles=["sub"])
+    assert explain(r(platform="youtube"), cfg, FilterState(5)) is None
+
+
+def test_owner_always_passes_role_filter():
+    assert explain(r(roles={"owner"}), Config(twitch_roles=["mod"]), FilterState(5)) is None
+
+
+def test_role_filter_unreportable_role():
+    cfg = Config(youtube_roles=["vip"])
+    assert explain(r(platform="youtube", roles={"sub", "mod"}), cfg, FilterState(5)) == "role"
+    assert explain(r(platform="youtube", roles={"owner"}), cfg, FilterState(5)) is None
+
+
+def test_explain_role_before_history():
+    state = FilterState(5)
+    assert explain(r(), Config(twitch_roles=["mod"]), state) == "role"
+    assert state.recent == {} and state.seen == {}
+
+
+def test_duplicate_from_other_user_within_window():
+    state, cfg = FilterState(5), Config()
+    assert apply(r(user="a", ts=0.0), cfg, state) is not None
+    assert explain(r(user="b", ts=10.0), cfg, state) == "duplicate"
+
+
+def test_duplicate_normalizes_case_and_spaces():
+    state, cfg = FilterState(5), Config()
+    apply(r("Hello   THERE friend", user="a", ts=0.0), cfg, state)
+    assert explain(r("hello there  friend", user="b", ts=1.0), cfg, state) == "duplicate"
+
+
+def test_duplicate_outside_window_passes():
+    state, cfg = FilterState(5), Config()
+    apply(r(user="a", ts=0.0), cfg, state)
+    assert explain(r(user="b", ts=31.0), cfg, state) is None
+
+
+def test_duplicate_window_zero_off():
+    state, cfg = FilterState(5), Config(repeat_seconds=0)
+    apply(r(user="a", ts=0.0), cfg, state)
+    assert explain(r(user="b", ts=1.0), cfg, state) is None
+
+
+def test_skipped_message_does_not_enter_seen():
+    state, cfg = FilterState(5), Config()
+    assert apply(r("see https://x.com now", user="a"), cfg, state) is None
+    assert state.seen == {}
+    cfg_roles = Config(twitch_roles=["mod"])
+    assert apply(r("nice play everyone", user="a"), cfg_roles, state) is None
+    assert apply(r("nice play everyone", user="b"), cfg, state) is not None
+
+
+def test_seen_is_pruned_and_capped():
+    state, cfg = FilterState(5), Config()
+    for i in range(250):
+        apply(r(f"distinct message number {i}", user=f"u{i}", ts=float(i) / 100), cfg, state)
+    assert len(state.seen) <= 200
+    apply(r("much later message here", ts=1000.0), cfg, state)
+    assert list(state.seen) == ["much later message here"]
+
+
+def test_per_user_repeat_still_reports_repeat():
+    state, cfg = FilterState(5), Config()
+    apply(r(user="a", ts=0.0), cfg, state)
+    assert explain(r(user="a", ts=1.0), cfg, state) == "repeat"
+
+
+def test_explain_agrees_with_apply_for_new_reasons():
+    cfg = Config(twitch_roles=["sub"])
+    state = FilterState(5)
+    for msg in (r(), r(roles={"sub"}), r(roles={"sub"}, user="b", ts=1.0)):
+        assert (explain(msg, cfg, state) is None) == (apply(msg, cfg, copy.deepcopy(state)) is not None)
+        apply(msg, cfg, state)

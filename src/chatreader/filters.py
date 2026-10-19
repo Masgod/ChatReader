@@ -13,6 +13,7 @@ CHAR_RUN_RE = re.compile(r"(.)\1{9}", re.DOTALL)
 class FilterState:
     size: int
     recent: dict[str, deque[str]] = field(default_factory=dict)
+    seen: dict[str, float] = field(default_factory=dict)  # normalized text -> time last accepted
 
 
 def _is_spam(text: str) -> bool:
@@ -23,6 +24,13 @@ def _is_spam(text: str) -> bool:
         return False
     top_count = Counter(tokens).most_common(1)[0][1]
     return top_count >= 0.6 * len(tokens)
+
+
+SEEN_CAP = 200
+
+
+def _key(text: str) -> str:
+    return " ".join(text.casefold().split())
 
 
 def _truncate(text: str, max_chars: int) -> str:
@@ -38,6 +46,9 @@ def explain(msg: Msg, cfg: Config, state: FilterState) -> str | None:
     text = msg.text.strip()
     if msg.user.lower() in {name.lower() for name in cfg.ignored_users}:
         return "ignored user"
+    allowed = getattr(cfg, f"{msg.platform}_roles", [])
+    if allowed and "owner" not in msg.roles and not msg.roles.intersection(allowed):
+        return "role"
     if text.startswith("!"):
         return "command"
     if LINK_RE.search(text):
@@ -46,6 +57,10 @@ def explain(msg: Msg, cfg: Config, state: FilterState) -> str | None:
         return "no text"
     if text in state.recent.get(msg.user, ()):
         return "repeat"
+    if cfg.repeat_seconds > 0:
+        last = state.seen.get(_key(text))
+        if last is not None and msg.ts - last <= cfg.repeat_seconds:
+            return "duplicate"
     if _is_spam(text):
         return "spam"
     return None
@@ -56,4 +71,9 @@ def apply(msg: Msg, cfg: Config, state: FilterState) -> Msg | None:
         return None
     text = msg.text.strip()
     state.recent.setdefault(msg.user, deque(maxlen=state.size)).append(text)
+    state.seen[_key(text)] = msg.ts
+    for k in [k for k, t in state.seen.items() if msg.ts - t > cfg.repeat_seconds]:
+        del state.seen[k]
+    while len(state.seen) > SEEN_CAP:
+        del state.seen[next(iter(state.seen))]
     return replace(msg, text=_truncate(text, cfg.max_chars))
