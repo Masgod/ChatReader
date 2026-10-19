@@ -67,6 +67,30 @@ class Controller:
         out = getattr(getattr(self._player, "_output", None), "connected", None)
         return {**self._status, "overlay": "n/a" if out is None else str(out)}
 
+    def snapshot(self) -> dict:
+        """Full status for the web UI. Never raises: a failing part reports error/False/0."""
+
+        def part(fn, fallback):
+            try:
+                return fn()
+            except Exception:
+                return fallback
+
+        cfg = self.cfg
+        sources = {
+            name: {"configured": bool(getattr(cfg, attr)), "state": self._status[name]}
+            for name, attr in _SOURCE_VALUE.items()
+        }
+        overlay = part(lambda: bool(getattr(getattr(self._player, "_output", None), "connected", False)), False)
+        return {
+            "sources": sources,
+            "overlay": overlay,
+            "model": part(lambda: self._tts.model_state, "error"),
+            "voices": part(lambda: self._tts.voices_ok, {"pt": False, "en": False}),
+            "queue": part(lambda: int(self._player.pending), 0),
+            "paused": part(lambda: bool(self._player.paused), False),
+        }
+
     @property
     def paused(self) -> bool:
         return bool(getattr(self._player, "paused", False))

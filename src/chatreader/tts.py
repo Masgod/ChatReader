@@ -63,25 +63,37 @@ class KokoroTTS:
         self._loader = loader
         self._kokoro = None
         self._voice = {}
+        self._voices_ok = {"pt": False, "en": False}
+        self.model_state = "missing"  # missing | loading | ready | error
         self.reload(cfg)
+
+    @property
+    def voices_ok(self) -> dict[str, bool]:
+        return dict(self._voices_ok)
 
     def reload(self, cfg: Config) -> None:
         if self._kokoro is None:
             model, voices = self._dir / MODEL_FILE, self._dir / VOICES_FILE
             if not (model.exists() and voices.exists()):
+                self.model_state = "missing"
                 return  # still downloading; boot calls reload again afterwards
+            self.model_state = "loading"
             try:
                 self._kokoro = self._loader(model, voices)
             except Exception as e:
+                self.model_state = "error"
                 self._warn(f"could not load Kokoro model: {e}")
                 return
+            self.model_state = "ready"
         known = set(self._kokoro.get_voices())
         chosen = {}
+        self._voices_ok = {"pt": False, "en": False}
         for lang, name in (("pt", cfg.voice_pt), ("en", cfg.voice_en)):
             if not VOICE_NAME_RE.fullmatch(name) or name not in known:
                 self._warn(f"unknown voice {name!r}, skipped")
             else:
                 chosen[lang] = name
+                self._voices_ok[lang] = True
         self._voice = chosen
 
     def synth(self, text: str, lang: str) -> bytes:

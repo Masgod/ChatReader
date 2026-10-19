@@ -13,6 +13,8 @@ class FakePlayer:
     def __init__(self):
         self.submitted = []
         self.calls = []
+        self.paused = False
+        self.pending = 0
 
     def submit(self, text, lang):
         self.submitted.append((text, lang))
@@ -22,9 +24,11 @@ class FakePlayer:
 
     def pause(self):
         self.calls.append("pause")
+        self.paused = True
 
     def resume(self):
         self.calls.append("resume")
+        self.paused = False
 
     def skip(self):
         self.calls.append("skip")
@@ -39,9 +43,40 @@ class FakePlayer:
 class FakeTTS:
     def __init__(self):
         self.reloaded = []
+        self.model_state = "ready"
+        self.voices_ok = {"pt": True, "en": True}
 
     def reload(self, cfg):
         self.reloaded.append(cfg)
+
+
+def test_snapshot_shape_and_values():
+    c, player, tts, tw, yt = make()
+    c.start()
+    try:
+        assert tw.started_evt.wait(WAIT)
+        snap = c.snapshot()
+        assert set(snap) == {"sources", "overlay", "model", "voices", "queue", "paused"}
+        assert snap["sources"]["twitch"] == {"configured": True, "state": "connected"}
+        assert snap["sources"]["youtube"]["configured"] is False
+        assert snap["queue"] == 0 and snap["paused"] is False
+        c.pause()
+        assert c.snapshot()["paused"] is True
+    finally:
+        c.shutdown()
+
+
+def test_snapshot_survives_failing_parts():
+    c, player, tts, *_ = make()
+
+    class Boom:
+        @property
+        def model_state(self):
+            raise RuntimeError("x")
+
+    c._tts = Boom()
+    snap = c.snapshot()
+    assert snap["model"] == "error" and snap["voices"] == {"pt": False, "en": False}
 
 
 class FakeSource:

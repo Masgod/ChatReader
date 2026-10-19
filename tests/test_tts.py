@@ -79,6 +79,26 @@ def test_loader_failure_warns(tmp_path):
     assert any("corrupt" in w for w in warnings)
 
 
+def test_model_state_transitions(tmp_path):
+    tts = KokoroTTS(tmp_path, Config(), lambda m: None, loader=lambda m, v: FakeKokoro())
+    assert tts.model_state == "missing"
+    _files(tmp_path)
+
+    def boom(m, v):
+        raise RuntimeError("corrupt")
+
+    bad = KokoroTTS(tmp_path, Config(), lambda m: None, loader=boom)
+    assert bad.model_state == "error"
+    tts.reload(Config())
+    assert tts.model_state == "ready"
+
+
+def test_voices_ok_reflects_known_voices(tmp_path):
+    _files(tmp_path)
+    tts = KokoroTTS(tmp_path, Config(voice_pt="zz_nope"), lambda m: None, loader=lambda m, v: FakeKokoro())
+    assert tts.voices_ok == {"pt": False, "en": True}
+
+
 @pytest.mark.slow
 def test_real_kokoro_returns_wav():
     voices = Path("voices")
