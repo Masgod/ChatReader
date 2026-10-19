@@ -12,6 +12,14 @@ from chatreader.sources.common import run_with_backoff
 URL = "wss://irc-ws.chat.twitch.tv:443"
 
 
+_BADGE_ROLES = {"broadcaster": "owner", "moderator": "mod", "vip": "vip", "subscriber": "sub", "founder": "sub"}
+
+
+def _roles(badges: str) -> frozenset[str]:
+    names = (b.split("/", 1)[0] for b in badges.split(",") if b)
+    return frozenset(_BADGE_ROLES[n] for n in names if n in _BADGE_ROLES)
+
+
 def parse_privmsg(line: str) -> Msg | None:
     line = line.rstrip("\r\n")
     tags: dict[str, str] = {}
@@ -27,7 +35,7 @@ def parse_privmsg(line: str) -> Msg | None:
     if not sep:
         return None
     nick = prefix[1:].split("!", 1)[0]
-    return Msg("twitch", tags.get("display-name") or nick, text, time.time())
+    return Msg("twitch", tags.get("display-name") or nick, text, time.time(), _roles(tags.get("badges", "")))
 
 
 def _session(

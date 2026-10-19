@@ -281,3 +281,42 @@ def test_error_before_delivery_returns_false():
     result = youtube._session("vid", lambda m: None, stop, lambda s: None,
                               lambda video_id: chat)
     assert result is False
+
+
+# ---- roles ----
+
+import pytest
+
+
+def _tw(tags: str):
+    prefix = f"@{tags} " if tags is not None else ""
+    return parse_privmsg(f"{prefix}:alice!alice@alice.tmi.twitch.tv PRIVMSG #chan :hello\r\n")
+
+
+def test_msg_roles_default_empty():
+    assert Msg("twitch", "a", "b", 0.0).roles == frozenset()
+
+
+def test_twitch_badges_to_roles():
+    assert _tw("badges=broadcaster/1,moderator/1,vip/1,subscriber/12").roles == {"owner", "mod", "vip", "sub"}
+    assert _tw("badges=founder/0").roles == {"sub"}
+    assert _tw("badges=premium/1,turbo/1").roles == frozenset()
+
+
+@pytest.mark.parametrize(
+    "tags,expected",
+    [("badges=", set()), ("badges=,", set()), ("badges=moderator", {"mod"}), (None, set()), ("display-name=Al", set())],
+)
+def test_twitch_bad_badges_tag(tags, expected):
+    assert _tw(tags).roles == expected
+
+
+def test_youtube_roles():
+    def item(**flags):
+        return SimpleNamespace(author=SimpleNamespace(name="x", **flags), message="hi")
+
+    assert youtube.to_msg(item(isChatOwner=True)).roles == {"owner"}
+    assert youtube.to_msg(item(isChatModerator=True)).roles == {"mod"}
+    assert youtube.to_msg(item(isChatSponsor=True)).roles == {"sub"}
+    assert youtube.to_msg(item(isChatOwner=True, isChatModerator=True, isChatSponsor=True)).roles == {"owner", "mod", "sub"}
+    assert youtube.to_msg(_item("Bob", "hi")).roles == frozenset()

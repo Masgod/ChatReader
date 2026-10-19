@@ -13,7 +13,12 @@ log = logging.getLogger(__name__)
 
 
 def to_msg(item) -> Msg:
-    return Msg("youtube", item.author.name, item.message or "", time.time())
+    a = item.author
+    roles = frozenset(
+        role for attr, role in (("isChatOwner", "owner"), ("isChatModerator", "mod"), ("isChatSponsor", "sub"))
+        if getattr(a, attr, False)
+    )
+    return Msg("youtube", a.name, item.message or "", time.time(), roles)
 
 
 def _session(
