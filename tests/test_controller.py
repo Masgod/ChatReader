@@ -212,6 +212,14 @@ def test_on_msg_exception_is_isolated():
     assert len(player.submitted) == 1 and "works" in player.submitted[0][0]
 
 
+def test_apply_config_reloads_only_on_voice_or_speed_change():
+    c, player, tts, *_ = make()
+    c.apply_config(replace(c.cfg, announce_user=False))
+    assert tts.reloaded == []
+    c.apply_config(replace(c.cfg, speed=1.2))
+    assert len(tts.reloaded) == 1
+
+
 def test_slow_reload_does_not_block_on_msg():
     c, player, tts, *_ = make()
     entered, release = threading.Event(), threading.Event()

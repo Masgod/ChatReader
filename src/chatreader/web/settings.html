@@ -149,6 +149,10 @@
           <button type="button" class="btn icon" data-preview="en" title="Preview the saved English voice" aria-label="Preview English voice">▶</button>
         </div>
       </label>
+      <label class="row grid">
+        <div><div class="name">Speed</div><div class="hint" id="speed-val">1.0×</div></div>
+        <input type="range" id="speed" data-key="speed" data-type="number" min="0.8" max="1.4" step="0.05" aria-label="Speech speed">
+      </label>
       <datalist id="pt-voices"><option value="pf_dora"><option value="pm_alex"><option value="pm_santa"></datalist>
       <datalist id="en-voices"><option value="af_heart"><option value="af_bella"><option value="am_michael"><option value="bf_emma"></datalist>
     </div>
@@ -207,6 +211,14 @@
         <div class="field"><input type="text" id="port" data-num-field="port" inputmode="numeric" aria-label="Port"></div>
       </label>
       <div class="row">
+        <div class="txt"><div class="name">CPU threads</div><div class="hint" id="threads-hint">Used for speech · restart required to change</div></div>
+        <div class="field step" data-num="cpu_threads" data-min="1" data-max="8" data-step="1">
+          <button type="button" data-d="-1" aria-label="Decrease CPU threads">−</button>
+          <input type="text" inputmode="numeric" aria-label="CPU threads">
+          <button type="button" data-d="1" aria-label="Increase CPU threads">+</button>
+        </div>
+      </div>
+      <div class="row">
         <div class="txt"><div class="name" id="l-startup">Start with Windows</div><div class="hint">Launch minimized on sign-in</div></div>
         <button type="button" class="sw" role="switch" aria-labelledby="l-startup" data-toggle="start_with_windows"></button>
       </div>
@@ -231,7 +243,7 @@ const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const SAMPLES = { pt: "Olá, este é um teste de voz.", en: "Hello, this is a voice test." };
 const NUM_KEYS = ["queue_size", "max_chars", "repeat_window", "port"];
-let state = null, saved = "", savedPort = null, flashTimer = 0;
+let state = null, saved = "", savedPort = null, savedThreads = null, flashTimer = 0;
 
 const snap = () => JSON.stringify(state);
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
@@ -265,6 +277,11 @@ function refresh() {
   }));
   $("#ignored-count").textContent = state.ignored_users.length;
 
+  $("#speed-val").textContent = Number(state.speed).toFixed(2).replace(/0$/, "") + "×";
+  const th = $("#threads-hint");
+  th.textContent = state.cpu_threads !== savedThreads ? "Restart required to apply" : "Used for speech · restart required to change";
+  th.className = "hint" + (state.cpu_threads !== savedThreads ? " warn" : "");
+
   const portChanged = state.port !== savedPort;
   const ph = $("#port-hint");
   ph.textContent = portChanged ? "Restart required to apply" : "Local server · restart required to change";
@@ -276,13 +293,13 @@ function refresh() {
 }
 
 function load(cfg) {
-  state = cfg; saved = snap(); savedPort = cfg.port;
+  state = cfg; saved = snap(); savedPort = cfg.port; savedThreads = cfg.cpu_threads;
   refresh();
 }
 
 for (const el of $$("[data-key]")) el.addEventListener("input", () => {
-  state[el.dataset.key] = el.dataset.key === "twitch_channel"
-    ? el.value.replace(/^.*twitch\.tv\//i, "").trim() : el.value;
+  state[el.dataset.key] = el.dataset.type === "number" ? Number(el.value)
+    : el.dataset.key === "twitch_channel" ? el.value.replace(/^.*twitch\.tv\//i, "").trim() : el.value;
   refresh();
 });
 for (const b of $$("[data-toggle]")) b.onclick = () => { state[b.dataset.toggle] = !state[b.dataset.toggle]; refresh(); };

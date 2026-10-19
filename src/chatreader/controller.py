@@ -55,7 +55,7 @@ class Controller:
                     self._start_source(name)
         self._join(to_join)
         # Slow disk work stays outside the lock so on_msg is never blocked by a voice load.
-        if (new.voice_pt, new.voice_en) != (old.voice_pt, old.voice_en):
+        if (new.voice_pt, new.voice_en, new.speed) != (old.voice_pt, old.voice_en, old.speed):
             try:
                 self._tts.reload(new)
             except Exception:

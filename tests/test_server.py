@@ -301,3 +301,11 @@ def test_settings_page_has_checklist(env):
     body = client.get("/settings").text
     for ident in ("checklist", "chk-model", "chk-source", "chk-overlay"):
         assert f'id="{ident}"' in body
+
+
+def test_pages_have_speed_controls(env):
+    client, *_ = env
+    settings = client.get("/settings").text
+    assert 'data-num="speed"' in settings or 'id="speed"' in settings
+    assert 'id="cpu_threads"' in settings or 'data-num="cpu_threads"' in settings
+    assert 'id="speed-input"' in client.get("/dock").text
