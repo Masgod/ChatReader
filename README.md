@@ -60,11 +60,11 @@ Open the overlay in one place only. Only one overlay connection is supported.
 
 ## OBS dock and status API
 
-Add `http://127.0.0.1:8765/dock` in OBS under Docks, Custom Browser Docks for a compact control panel (status, Pause/Resume, Skip, Test voice, speed, YouTube field). It uses `GET /api/status` (sources, overlay, model, queue, paused) and `POST /api/control` (`{"action": "pause" | "resume" | "skip"}`). Both are protected like the rest of the local server. Long messages start speaking after their first sentence is synthesized (sentence prefetch).
+The control center is one page with three tabs: **Live** (status, queue with remove and clear, Pause/Resume, Skip, Copy overlay URL, Quit), **Console** (chat activity with the outcome of each message, plus the app log and a debug toggle) and **Settings**. Add `http://127.0.0.1:8765/dock` in OBS under Docks, Custom Browser Docks (it opens on Live); `/` and `/settings` open the same page. It works from about 300 px wide up. API: `GET /api/status`, `POST /api/control` (`pause`, `resume`, `skip`, `quit`), `GET /api/queue`, `POST /api/queue/remove` (`{"id": n}`), `POST /api/queue/clear`, `GET /api/events?since=N`, `POST /api/toggle` (`{"name": "debug", "value": bool}`), `GET /api/voices`. All are protected like the rest of the local server. Chat text shown in the console is kept in memory only (last 500 events) and is never written to disk by this feature. Long messages start speaking after their first sentence is synthesized (sentence prefetch).
 
 ## Settings page and tray menu
 
-The settings page is at `http://127.0.0.1:8765/settings`. It opens on first run and from the tray menu ("Settings..."). It edits every key in the table below. Saving writes `config.toml` and applies the change immediately. Filters and voices apply at once. Changing the Twitch channel or YouTube video ID reconnects that source. Invalid values are rejected with a message, and the previous config stays active. The **Test voice** button speaks a sample line with the selected voice.
+The Settings tab is at `http://127.0.0.1:8765/settings`. It opens on first run and from the tray menu ("Settings..."). It edits every key in the table below. Saving writes `config.toml` and applies the change immediately. Filters and voices apply at once. Changing the Twitch channel or YouTube video ID reconnects that source. Invalid values are rejected with a message, and the previous config stays active. The voice fields are dropdowns built from the model's real voice list (a text box if the model is not loaded). The **Test voice** button speaks a sample line with the saved voice.
 
 The tray menu has:
 
@@ -113,7 +113,7 @@ The file uses the defaults below when a key is missing. Keys that are not known 
 
 Automated:
 
-- `uv run pytest -q -m "not slow"`: 160 passed.
+- `uv run pytest -q -m "not slow"`: 224 passed.
 
 Headless smoke launch with an empty config folder:
 

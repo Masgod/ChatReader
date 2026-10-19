@@ -37,7 +37,7 @@ On the very first run ChatReader will:
 
 1. Download the voice model (about 120 MB). This takes a minute; the tray icon is already there while it downloads.
 2. Create `config.toml` with default settings.
-3. Open the **settings page** in your browser.
+3. Open the **control center** (the Settings tab) in your browser.
 
 If the download fails you get a tray notification. Check your internet and start it again; it only fetches what is missing.
 
@@ -74,13 +74,17 @@ You can keep a small control panel next to your scenes, so you never leave OBS.
 1. In OBS, open **Docks** → **Custom Browser Docks**.
 2. Name it `ChatReader` and set the URL to `http://127.0.0.1:8765/dock`. Click **Apply**.
 
-The panel shows green, amber or red status for Twitch, YouTube, the OBS overlay and the voice model, plus how many messages are waiting. It has **Pause / Resume**, **Skip**, **Test voice**, a **Speed** slider and a field for your YouTube link or channel.
+The page has three tabs and works from a narrow dock (about 300 px) up to a full browser tab. `/` and `/settings` open the same page.
 
-On first run the settings page also shows a short **Getting started** checklist (voice model ready, a chat source set, OBS overlay connected). It is shown whenever one of the three is not done (for example when OBS is closed) and disappears when all three are done.
+- **Live**: green, amber or red status for Twitch, YouTube, the OBS overlay and the voice model; **Pause / Resume**, **Skip**, **Copy overlay URL** and **Quit** (click twice to confirm), the same as the tray menu; and the **queue**: the message being read, then those waiting. Click **×** to remove one waiting message, or **Clear all**. The one being read is ended with **Skip**.
+- **Console**: every chat message with what happened to it, plus ChatReader's own log. Outcomes: `queued` (accepted), `played`, `failed` (the voice could not make audio), `dropped` (the queue was full), `skipped` (you pressed Skip), `removed` (you removed it) and `skipped:<reason>` for filtered messages (ignored user, command, link, no text, repeat, spam). Use the **All / Chat / Log** chips, **Pause scrolling**, **Clear view** and the **Debug** switch. The console is kept in memory only (the last 500 lines) and is not saved to disk.
+- **Settings**: everything in [section 6](#6-settings-explained).
+
+On first run the Settings tab also shows a short **Getting started** checklist (voice model ready, a chat source set, OBS overlay connected). It is shown whenever one of the three is not done and disappears when all three are done.
 
 ## 4. Connect your chats
 
-Open the settings page (tray icon → **Settings...**, or `http://127.0.0.1:8765/settings`).
+Open the Settings tab (tray icon → **Settings...**, or `http://127.0.0.1:8765/settings`).
 
 **Twitch:** type your channel name under **Twitch channel**, for example `mychannel`. No login is needed; ChatReader reads chat anonymously. You can also paste `twitch.tv/mychannel` and it is cleaned up for you.
 
@@ -96,9 +100,9 @@ Look for the purple circle near the clock (you may need to click the `^` arrow).
 
 | Item | What it does |
 |---|---|
-| **Pause / Resume** | Stops speaking. New messages keep queuing up to your queue size. |
+| **Pause / Resume** | (also on the Live tab) Stops speaking. New messages keep queuing up to your queue size. |
 | **Skip current** | Cuts off the message being read and goes to the next one. |
-| **Settings...** | Opens the settings page. |
+| **Settings...** | Opens the control center. |
 | **Copy overlay URL** | Copies the OBS Browser Source address. |
 | **Quit** | Closes ChatReader completely. |
 
@@ -113,7 +117,7 @@ The page has a footer with **Save** and **Test voice**. When you change somethin
 
 ### Voices
 - **Default language**: used when ChatReader isn't sure which language a message is in (very short messages like `gg`, or mixed text).
-- **Portuguese voice** / **English voice**: which voice speaks each language. The ▶ button plays a sample of the *saved* voice, so press **Save** first after changing it. See [Voices](#8-voices).
+- **Portuguese voice** / **English voice**: pick from the voices the model actually has (a text box if the model is not loaded yet). The ▶ button plays a sample of the *saved* voice, so press **Save** first after changing it. See [Voices](#8-voices).
 
 ### Speed and CPU
 - **Speed** (Voices): 0.8 to 1.4. Higher is faster speech.
