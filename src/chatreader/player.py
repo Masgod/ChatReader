@@ -1,6 +1,7 @@
 """Bounded message queue with one worker thread that synthesizes and plays speech."""
 import collections
 import concurrent.futures
+import dataclasses
 import logging
 import re
 import threading
@@ -17,6 +18,14 @@ def split_sentences(text: str) -> list[str]:
     return parts if len(parts) > 1 else [text]
 
 
+@dataclasses.dataclass(frozen=True)
+class QueueItem:
+    id: int
+    text: str
+    lang: str
+    user: str
+
+
 class Output(Protocol):
     def play(self, wav: bytes) -> None:
         """Block until the clip finishes, times out or stop() is called."""
@@ -26,14 +35,23 @@ class Output(Protocol):
 
 
 class Player:
-    def __init__(self, synth: Callable[[str, str], bytes], output: Output, maxsize: int):
+    def __init__(
+        self,
+        synth: Callable[[str, str], bytes],
+        output: Output,
+        maxsize: int,
+        on_event: Callable[[QueueItem, str], None] | None = None,
+    ):
         self._synth = synth
         self._output = output
+        self._on_event = on_event
         # deque with maxlen silently drops the oldest item when a new one arrives at capacity.
-        self._queue: collections.deque[tuple[str, str]] = collections.deque(maxlen=maxsize)
+        self._queue: collections.deque[QueueItem] = collections.deque(maxlen=maxsize)
         self._cond = threading.Condition()
         self._paused = False
         self._shutdown = False
+        self._next_id = 0
+        self._playing: QueueItem | None = None
         # Bumped by skip(); the worker compares it to the value captured when it popped an item.
         self._skip_gen = 0
         # One worker: at most one synthesis runs at a time, the next sentence prepares while one plays.
@@ -53,15 +71,46 @@ class Player:
     def start(self) -> None:
         self._thread.start()
 
-    def submit(self, text: str, lang: str) -> None:
+    def submit(self, text: str, lang: str, user: str = "") -> None:
         with self._cond:
-            self._queue.append((text, lang))
+            evicted = self._queue[0] if len(self._queue) == self._queue.maxlen else None
+            self._next_id += 1
+            self._queue.append(QueueItem(self._next_id, text, lang, user))
             self._cond.notify_all()
+        if evicted:
+            self._emit([(evicted, "dropped")])
+
+    def snapshot(self) -> dict:
+        with self._cond:
+            return {"playing": self._playing, "waiting": list(self._queue)}
+
+    def remove(self, item_id: int) -> bool:
+        """Remove a waiting item. The one playing is ended with skip(), not removed."""
+        with self._cond:
+            for i, item in enumerate(self._queue):
+                if item.id == item_id:
+                    del self._queue[i]
+                    break
+            else:
+                return False
+        self._emit([(item, "removed")])
+        return True
+
+    def clear(self) -> int:
+        with self._cond:
+            items = list(self._queue)
+            self._queue.clear()
+        self._emit([(i, "removed") for i in items])
+        return len(items)
 
     def set_maxsize(self, n: int) -> None:
+        n = max(1, n)
         with self._cond:
             # A deque's maxlen is read-only; rebuilding keeps the newest n items (drops oldest).
-            self._queue = collections.deque(self._queue, maxlen=max(1, n))
+            items = list(self._queue)
+            evicted = items[: max(0, len(items) - n)]
+            self._queue = collections.deque(items, maxlen=n)
+        self._emit([(i, "dropped") for i in evicted])
 
     def pause(self) -> None:
         with self._cond:
@@ -86,6 +135,16 @@ class Player:
         if self._thread.is_alive():
             self._thread.join(timeout=2)
 
+    def _emit(self, events: list[tuple[QueueItem, str]]) -> None:
+        """Report outcomes outside the lock; a failing listener must not stop playback."""
+        if not self._on_event:
+            return
+        for item, outcome in events:
+            try:
+                self._on_event(item, outcome)
+            except Exception:
+                log.exception("queue event listener failed")
+
     def _run(self) -> None:
         wait_connected = getattr(self._output, "wait_connected", None)
         while True:
@@ -98,34 +157,52 @@ class Player:
                     self._cond.wait()
                 if self._shutdown:
                     return
-                text, lang = self._queue.popleft()
+                item = self._queue.popleft()
+                self._playing = item
                 gen = self._skip_gen
-            sentences = split_sentences(text)
             try:
-                pending = self._pool.submit(self._synth_safe, sentences[0], lang)
-            except RuntimeError:
-                return  # pool already shut down
-            for i in range(len(sentences)):
-                try:
-                    wav = pending.result()
-                except concurrent.futures.CancelledError:
-                    return  # shutdown cancelled the queued synthesis
+                outcome = self._play_item(item, gen)
+            finally:
                 with self._cond:
-                    # A skip or shutdown during synth must cancel this item before play() starts.
-                    if self._shutdown:
-                        return
-                    if self._skip_gen != gen:
-                        break
+                    self._playing = None
+            if outcome is None:
+                return  # shutdown
+            self._emit([(item, outcome)])
+
+    def _play_item(self, item: QueueItem, gen: int) -> str | None:
+        """Play every sentence of an item. Returns played, failed or skipped; None on shutdown."""
+        sentences = split_sentences(item.text)
+        try:
+            pending = self._pool.submit(self._synth_safe, sentences[0], item.lang)
+        except RuntimeError:
+            return None  # pool already shut down
+        any_audio = False
+        for i in range(len(sentences)):
+            try:
+                wav = pending.result()
+            except concurrent.futures.CancelledError:
+                return None  # shutdown cancelled the queued synthesis
+            with self._cond:
+                # A skip or shutdown during synth must cancel this item before play() starts.
+                if self._shutdown:
+                    return None
+                if self._skip_gen != gen:
+                    return "skipped"
+            try:
+                nxt = self._pool.submit(self._synth_safe, sentences[i + 1], item.lang) if i + 1 < len(sentences) else None
+            except RuntimeError:
+                return None  # shutdown while this sentence was synthesizing
+            if wav is not None:
+                any_audio = True
                 try:
-                    nxt = self._pool.submit(self._synth_safe, sentences[i + 1], lang) if i + 1 < len(sentences) else None
-                except RuntimeError:
-                    return  # shutdown while this sentence was synthesizing
-                if wav is not None:
-                    try:
-                        self._output.play(wav)
-                    except Exception:
-                        log.exception("playback failed; skipping sentence")
-                pending = nxt
+                    self._output.play(wav)
+                except Exception:
+                    log.exception("playback failed; skipping sentence")
+            pending = nxt
+        with self._cond:
+            if self._skip_gen != gen:
+                return "skipped"
+        return "played" if any_audio else "failed"
 
     def _synth_safe(self, text: str, lang: str) -> bytes | None:
         try:

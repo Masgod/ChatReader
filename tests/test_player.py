@@ -243,9 +243,9 @@ def test_set_maxsize_drops_oldest_when_shrinking():
         player.submit(t, "en")
     player.set_maxsize(2)
     assert player.pending == 2
-    assert list(player._queue) == [("d", "en"), ("e", "en")]
+    assert [(i.text, i.lang) for i in player._queue] == [("d", "en"), ("e", "en")]
     player.submit("f", "en")
-    assert list(player._queue) == [("e", "en"), ("f", "en")]
+    assert [(i.text, i.lang) for i in player._queue] == [("e", "en"), ("f", "en")]
     player.set_maxsize(4)
     for t in "ghi":
         player.submit(t, "en")
@@ -257,7 +257,7 @@ def test_set_maxsize_clamps_to_one():
     player.submit("a", "en")
     player.submit("b", "en")
     player.set_maxsize(0)
-    assert list(player._queue) == [("b", "en")]
+    assert [(i.text, i.lang) for i in player._queue] == [("b", "en")]
 
 
 def test_split_sentences_cases():
@@ -362,5 +362,164 @@ def test_failed_later_sentence_skips_only_it():
         player.submit("A. B. C.", "pt")
         assert wait_until(lambda: len(out.played) == 2)
         assert out.played == [b"A.", b"C."]
+    finally:
+        player.shutdown()
+
+
+def _ev_player(out=None, synth_fn=synth, maxsize=10):
+    events, lock = [], threading.Lock()
+
+    def on_event(item, outcome):
+        with lock:
+            events.append((item.id, outcome))
+
+    out = out or FakeOutput()
+    return Player(synth_fn, out, maxsize=maxsize, on_event=on_event), out, events
+
+
+def test_submit_assigns_unique_ids_and_snapshot_orders_waiting():
+    player, out, events = _ev_player()
+    player.pause()
+    player.submit("a", "pt", "u1")
+    player.submit("b", "pt", "u2")
+    player.submit("c", "en", "u3")
+    snap = player.snapshot()
+    assert snap["playing"] is None
+    assert [i.text for i in snap["waiting"]] == ["a", "b", "c"]
+    assert [i.user for i in snap["waiting"]] == ["u1", "u2", "u3"]
+    ids = [i.id for i in snap["waiting"]]
+    assert ids == sorted(set(ids))
+
+
+def test_snapshot_reports_playing_item():
+    player, out, events = _ev_player()
+    out.block = True
+    player.start()
+    try:
+        player.submit("a", "pt", "u1")
+        assert out.started.wait(WAIT)
+        snap = player.snapshot()
+        assert snap["playing"].text == "a" and snap["waiting"] == []
+        out.block = False
+        player.skip()
+        assert wait_until(lambda: player.snapshot()["playing"] is None)
+    finally:
+        player.shutdown()
+
+
+def test_remove_waiting_unknown_and_playing():
+    player, out, events = _ev_player()
+    out.block = True
+    player.start()
+    try:
+        player.submit("playing", "pt")
+        assert out.started.wait(WAIT)
+        player.submit("waiting", "pt")
+        playing_id = player.snapshot()["playing"].id
+        waiting_id = player.snapshot()["waiting"][0].id
+        assert player.remove(9999) is False
+        assert player.remove(playing_id) is False
+        assert player.remove(waiting_id) is True
+        assert (waiting_id, "removed") in events
+        out.block = False
+        player.skip()
+        assert wait_until(lambda: player.pending == 0)
+        assert b"waiting" not in out.played
+    finally:
+        player.shutdown()
+
+
+def test_clear_returns_count_and_emits_removed():
+    player, out, events = _ev_player()
+    player.pause()
+    for t in "abc":
+        player.submit(t, "pt")
+    assert player.clear() == 3
+    assert [o for _, o in events] == ["removed"] * 3 and player.pending == 0
+
+
+def test_full_queue_emits_dropped_with_evicted_item():
+    player, out, events = _ev_player(maxsize=2)
+    player.pause()
+    player.submit("a", "pt")
+    first_id = player.snapshot()["waiting"][0].id
+    player.submit("b", "pt")
+    player.submit("c", "pt")
+    assert events == [(first_id, "dropped")]
+
+
+def test_played_failed_skipped_outcomes():
+    player, out, events = _ev_player()
+    player.start()
+    try:
+        player.submit("fine", "pt")
+        assert wait_until(lambda: any(o == "played" for _, o in events))
+    finally:
+        player.shutdown()
+
+    def bad(text, lang):
+        raise RuntimeError("boom")
+
+    player, out, events = _ev_player(synth_fn=bad)
+    player.start()
+    try:
+        player.submit("x", "pt")
+        assert wait_until(lambda: any(o == "failed" for _, o in events))
+        assert not any(o == "played" for _, o in events)
+    finally:
+        player.shutdown()
+
+    player, out, events = _ev_player()
+    out.block = True
+    player.start()
+    try:
+        player.submit("s", "pt")
+        assert out.started.wait(WAIT)
+        player.skip()
+        assert wait_until(lambda: any(o == "skipped" for _, o in events))
+        assert not any(o == "played" for _, o in events)
+    finally:
+        player.shutdown()
+
+
+def test_remove_races_with_worker():
+    out = FakeOutput()
+
+    def slow(text, lang):
+        time.sleep(0.002)
+        return text.encode()
+
+    player, out, events = _ev_player(out=out, synth_fn=slow, maxsize=100)
+    player.start()
+    try:
+        for i in range(40):
+            player.submit(f"m{i}", "pt")
+        ids = [i.id for i in player.snapshot()["waiting"]]
+        removed = [i for i in ids if player.remove(i)]
+        assert wait_until(lambda: player.pending == 0 and player.snapshot()["playing"] is None, 5)
+        time.sleep(0.1)
+        by_id = {}
+        for i, o in events:
+            by_id.setdefault(i, []).append(o)
+        for i in removed:
+            assert by_id[i] == ["removed"]
+        for i, outs in by_id.items():
+            assert len(outs) == 1, (i, outs)
+    finally:
+        player.shutdown()
+
+
+def test_on_event_exception_is_ignored():
+    out = FakeOutput()
+
+    def boom(item, outcome):
+        raise RuntimeError("x")
+
+    player = Player(synth, out, maxsize=10, on_event=boom)
+    player.start()
+    try:
+        player.submit("a", "pt")
+        player.submit("b", "pt")
+        assert wait_until(lambda: len(out.played) == 2)
     finally:
         player.shutdown()
