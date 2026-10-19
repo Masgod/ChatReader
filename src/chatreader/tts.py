@@ -12,7 +12,6 @@ RELEASE = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-f
 MODEL_FILE = "kokoro-v1.0.int8.onnx"  # int8: ~92 MB, noticeably lighter on CPU than the fp32 model
 VOICES_FILE = "voices-v1.0.bin"
 LANG_CODE = {"pt": "pt-br", "en": "en-us"}
-THREADS = 2  # keep TTS from competing with the game for cores
 
 
 def _download(url: str, dest: Path) -> None:
@@ -40,12 +39,12 @@ def ensure_models(
     return failed
 
 
-def _kokoro_load(model: Path, voices: Path):
+def _kokoro_load(model: Path, voices: Path, threads: int):
     import onnxruntime as rt
     from kokoro_onnx import Kokoro
 
     opts = rt.SessionOptions()
-    opts.intra_op_num_threads = THREADS
+    opts.intra_op_num_threads = threads  # fewer threads keeps TTS from competing with the game
     session = rt.InferenceSession(str(model), sess_options=opts, providers=["CPUExecutionProvider"])
     return Kokoro.from_session(session, str(voices))
 
@@ -63,25 +62,40 @@ class KokoroTTS:
         self._loader = loader
         self._kokoro = None
         self._voice = {}
+        self._threads = cfg.cpu_threads  # read once: changing it needs a restart
+        self._speed = cfg.speed
+        self._voices_ok = {"pt": False, "en": False}
+        self.model_state = "missing"  # missing | loading | ready | error
         self.reload(cfg)
+
+    @property
+    def voices_ok(self) -> dict[str, bool]:
+        return dict(self._voices_ok)
 
     def reload(self, cfg: Config) -> None:
         if self._kokoro is None:
             model, voices = self._dir / MODEL_FILE, self._dir / VOICES_FILE
             if not (model.exists() and voices.exists()):
+                self.model_state = "missing"
                 return  # still downloading; boot calls reload again afterwards
+            self.model_state = "loading"
             try:
-                self._kokoro = self._loader(model, voices)
+                self._kokoro = self._loader(model, voices, self._threads)
             except Exception as e:
+                self.model_state = "error"
                 self._warn(f"could not load Kokoro model: {e}")
                 return
+            self.model_state = "ready"
+        self._speed = cfg.speed
         known = set(self._kokoro.get_voices())
         chosen = {}
+        self._voices_ok = {"pt": False, "en": False}
         for lang, name in (("pt", cfg.voice_pt), ("en", cfg.voice_en)):
             if not VOICE_NAME_RE.fullmatch(name) or name not in known:
                 self._warn(f"unknown voice {name!r}, skipped")
             else:
                 chosen[lang] = name
+                self._voices_ok[lang] = True
         self._voice = chosen
 
     def synth(self, text: str, lang: str) -> bytes:
@@ -91,7 +105,7 @@ class KokoroTTS:
         name = voice.get(lang)
         if name is None:
             raise RuntimeError(f"no voice configured for {lang!r}")
-        samples, rate = kokoro.create(text, voice=name, speed=1.0, lang=LANG_CODE[lang])
+        samples, rate = kokoro.create(text, voice=name, speed=self._speed, lang=LANG_CODE[lang])
         buf = io.BytesIO()
         with wave.open(buf, "wb") as w:
             w.setnchannels(1)

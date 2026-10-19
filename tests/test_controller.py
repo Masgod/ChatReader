@@ -13,6 +13,8 @@ class FakePlayer:
     def __init__(self):
         self.submitted = []
         self.calls = []
+        self.paused = False
+        self.pending = 0
 
     def submit(self, text, lang):
         self.submitted.append((text, lang))
@@ -22,9 +24,11 @@ class FakePlayer:
 
     def pause(self):
         self.calls.append("pause")
+        self.paused = True
 
     def resume(self):
         self.calls.append("resume")
+        self.paused = False
 
     def skip(self):
         self.calls.append("skip")
@@ -39,9 +43,40 @@ class FakePlayer:
 class FakeTTS:
     def __init__(self):
         self.reloaded = []
+        self.model_state = "ready"
+        self.voices_ok = {"pt": True, "en": True}
 
     def reload(self, cfg):
         self.reloaded.append(cfg)
+
+
+def test_snapshot_shape_and_values():
+    c, player, tts, tw, yt = make()
+    c.start()
+    try:
+        assert tw.started_evt.wait(WAIT)
+        snap = c.snapshot()
+        assert set(snap) == {"sources", "overlay", "model", "voices", "queue", "paused"}
+        assert snap["sources"]["twitch"] == {"configured": True, "state": "connected"}
+        assert snap["sources"]["youtube"]["configured"] is False
+        assert snap["queue"] == 0 and snap["paused"] is False
+        c.pause()
+        assert c.snapshot()["paused"] is True
+    finally:
+        c.shutdown()
+
+
+def test_snapshot_survives_failing_parts():
+    c, player, tts, *_ = make()
+
+    class Boom:
+        @property
+        def model_state(self):
+            raise RuntimeError("x")
+
+    c._tts = Boom()
+    snap = c.snapshot()
+    assert snap["model"] == "error" and snap["voices"] == {"pt": False, "en": False}
 
 
 class FakeSource:
@@ -53,7 +88,8 @@ class FakeSource:
         self.started_evt = threading.Event()
         self.on_status = None
 
-    def __call__(self, value, on_msg, stop_event, on_status):
+    def __call__(self, value, on_msg, stop_event, on_status, **kw):
+        self.kw = kw
         self.started.append(value)
         self.on_status = on_status
         self.started_evt.set()
@@ -175,6 +211,30 @@ def test_on_msg_exception_is_isolated():
     c.on_msg(Msg("twitch", "alice", "boom boom this fails", 0.0))
     c.on_msg(Msg("twitch", "bob", "this one works fine ok", 0.0))
     assert len(player.submitted) == 1 and "works" in player.submitted[0][0]
+
+
+def test_apply_config_reloads_only_on_voice_or_speed_change():
+    c, player, tts, *_ = make()
+    c.apply_config(replace(c.cfg, announce_user=False))
+    assert tts.reloaded == []
+    c.apply_config(replace(c.cfg, speed=1.2))
+    assert len(tts.reloaded) == 1
+
+
+def test_channel_only_starts_youtube_and_restarts_on_change():
+    cfg = Config(twitch_channel="", youtube_video_id="", youtube_channel="@one")
+    c, player, tts, tw, yt = make(cfg)
+    c.start()
+    try:
+        assert yt.started_evt.wait(WAIT)
+        assert yt.started == [""] and yt.kw == {"channel": "@one"}
+        assert c.snapshot()["sources"]["youtube"]["configured"] is True
+        yt.started_evt.clear()
+        c.apply_config(replace(cfg, youtube_channel="@two"))
+        assert yt.started_evt.wait(WAIT)
+        assert yt.kw == {"channel": "@two"} and tw.started == []
+    finally:
+        c.shutdown()
 
 
 def test_slow_reload_does_not_block_on_msg():

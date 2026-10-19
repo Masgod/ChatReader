@@ -18,6 +18,7 @@ class FakeKokoro:
 
     def create(self, text, voice, speed, lang):
         self.calls.append((text, voice, lang))
+        self.speeds = getattr(self, "speeds", []) + [speed]
         return np.zeros(2400, dtype=np.float32), 24000
 
 
@@ -41,7 +42,7 @@ def test_ensure_models_skips_existing_and_reports_failures(tmp_path):
 def test_synth_returns_wav_with_voice_and_language(tmp_path):
     _files(tmp_path)
     fake = FakeKokoro()
-    tts = KokoroTTS(tmp_path, Config(), lambda m: None, loader=lambda m, v: fake)
+    tts = KokoroTTS(tmp_path, Config(), lambda m: None, loader=lambda m, v, t: fake)
     data = tts.synth("oi", "pt")
     tts.synth("hi", "en")
     with wave.open(io.BytesIO(data)) as w:
@@ -52,7 +53,7 @@ def test_synth_returns_wav_with_voice_and_language(tmp_path):
 def test_unknown_voice_is_skipped_with_warning(tmp_path):
     _files(tmp_path)
     warnings = []
-    tts = KokoroTTS(tmp_path, Config(voice_pt="zz_nope"), warnings.append, loader=lambda m, v: FakeKokoro())
+    tts = KokoroTTS(tmp_path, Config(voice_pt="zz_nope"), warnings.append, loader=lambda m, v, t: FakeKokoro())
     assert any("zz_nope" in w for w in warnings)
     with pytest.raises(RuntimeError):
         tts.synth("oi", "pt")
@@ -60,7 +61,7 @@ def test_unknown_voice_is_skipped_with_warning(tmp_path):
 
 
 def test_missing_files_then_reload_after_download(tmp_path):
-    tts = KokoroTTS(tmp_path, Config(), lambda m: None, loader=lambda m, v: FakeKokoro())
+    tts = KokoroTTS(tmp_path, Config(), lambda m: None, loader=lambda m, v, t: FakeKokoro())
     with pytest.raises(RuntimeError):
         tts.synth("oi", "pt")
     _files(tmp_path)
@@ -72,11 +73,54 @@ def test_loader_failure_warns(tmp_path):
     _files(tmp_path)
     warnings = []
 
-    def boom(m, v):
+    def boom(m, v, t):
         raise RuntimeError("corrupt")
 
     KokoroTTS(tmp_path, Config(), warnings.append, loader=boom)
     assert any("corrupt" in w for w in warnings)
+
+
+def test_model_state_transitions(tmp_path):
+    tts = KokoroTTS(tmp_path, Config(), lambda m: None, loader=lambda m, v, t: FakeKokoro())
+    assert tts.model_state == "missing"
+    _files(tmp_path)
+
+    def boom(m, v, t):
+        raise RuntimeError("corrupt")
+
+    bad = KokoroTTS(tmp_path, Config(), lambda m: None, loader=boom)
+    assert bad.model_state == "error"
+    tts.reload(Config())
+    assert tts.model_state == "ready"
+
+
+def test_voices_ok_reflects_known_voices(tmp_path):
+    _files(tmp_path)
+    tts = KokoroTTS(tmp_path, Config(voice_pt="zz_nope"), lambda m: None, loader=lambda m, v, t: FakeKokoro())
+    assert tts.voices_ok == {"pt": False, "en": True}
+
+
+def test_speed_passed_to_create(tmp_path):
+    _files(tmp_path)
+    fake = FakeKokoro()
+    tts = KokoroTTS(tmp_path, Config(), lambda m: None, loader=lambda m, v, t: fake)
+    tts.synth("oi", "pt")
+    tts.reload(Config(speed=1.2))
+    tts.synth("oi", "pt")
+    assert fake.speeds == [1.0, 1.2]
+
+
+def test_loader_gets_threads_once(tmp_path):
+    _files(tmp_path)
+    seen = []
+
+    def loader(m, v, t):
+        seen.append(t)
+        return FakeKokoro()
+
+    tts = KokoroTTS(tmp_path, Config(cpu_threads=4), lambda m: None, loader=loader)
+    tts.reload(Config(cpu_threads=6))
+    assert seen == [4]
 
 
 @pytest.mark.slow

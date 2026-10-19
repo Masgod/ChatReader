@@ -1,10 +1,20 @@
 """Bounded message queue with one worker thread that synthesizes and plays speech."""
 import collections
+import concurrent.futures
 import logging
+import re
 import threading
 from typing import Callable, Protocol
 
 log = logging.getLogger(__name__)
+
+_SENTENCE_END = re.compile(r"(?<=[.!?…])\s+")
+
+
+def split_sentences(text: str) -> list[str]:
+    """Split after . ! ? … so the first sentence can start playing sooner. Never returns an empty list."""
+    parts = [p.strip() for p in _SENTENCE_END.split(text) if p.strip()]
+    return parts if len(parts) > 1 else [text]
 
 
 class Output(Protocol):
@@ -26,6 +36,8 @@ class Player:
         self._shutdown = False
         # Bumped by skip(); the worker compares it to the value captured when it popped an item.
         self._skip_gen = 0
+        # One worker: at most one synthesis runs at a time, the next sentence prepares while one plays.
+        self._pool = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="chatreader-synth")
         self._thread = threading.Thread(target=self._run, name="chatreader-player", daemon=True)
 
     @property
@@ -70,6 +82,7 @@ class Player:
             self._shutdown = True
             self._cond.notify_all()
         self._output.stop()
+        self._pool.shutdown(wait=False, cancel_futures=True)
         if self._thread.is_alive():
             self._thread.join(timeout=2)
 
@@ -87,18 +100,36 @@ class Player:
                     return
                 text, lang = self._queue.popleft()
                 gen = self._skip_gen
+            sentences = split_sentences(text)
             try:
-                wav = self._synth(text, lang)
-            except Exception:
-                log.exception("synthesis failed; skipping message")
-                continue
-            with self._cond:
-                # A skip or shutdown during synth must cancel this item before play() starts.
-                if self._shutdown:
-                    return
-                if self._skip_gen != gen:
-                    continue
-            try:
-                self._output.play(wav)
-            except Exception:
-                log.exception("playback failed; skipping message")
+                pending = self._pool.submit(self._synth_safe, sentences[0], lang)
+            except RuntimeError:
+                return  # pool already shut down
+            for i in range(len(sentences)):
+                try:
+                    wav = pending.result()
+                except concurrent.futures.CancelledError:
+                    return  # shutdown cancelled the queued synthesis
+                with self._cond:
+                    # A skip or shutdown during synth must cancel this item before play() starts.
+                    if self._shutdown:
+                        return
+                    if self._skip_gen != gen:
+                        break
+                try:
+                    nxt = self._pool.submit(self._synth_safe, sentences[i + 1], lang) if i + 1 < len(sentences) else None
+                except RuntimeError:
+                    return  # shutdown while this sentence was synthesizing
+                if wav is not None:
+                    try:
+                        self._output.play(wav)
+                    except Exception:
+                        log.exception("playback failed; skipping sentence")
+                pending = nxt
+
+    def _synth_safe(self, text: str, lang: str) -> bytes | None:
+        try:
+            return self._synth(text, lang)
+        except Exception:
+            log.exception("synthesis failed; skipping sentence")
+            return None

@@ -12,7 +12,7 @@ import uvicorn
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
-from chatreader.config import Config, normalize, validate
+from chatreader.config import Config, normalize, same_type, validate
 
 READY_TIMEOUT = 5.0  # seconds run_server waits for uvicorn to start listening
 EXTRA_WAIT = 2.0  # seconds added to the WAV duration before play() gives up
@@ -124,7 +124,7 @@ def _type_errors(body) -> list[str]:
         elif isinstance(default, list):
             if not isinstance(v, list) or not all(isinstance(x, str) for x in v):
                 errors.append(f"{f.name} must be a list of strings")
-        elif type(v) is not type(default):  # exact type: bool is not int
+        elif not same_type(v, default):
             errors.append(f"{f.name} must be {type(default).__name__}")
     return errors
 
@@ -134,6 +134,8 @@ def create_app(
     apply_config: Callable[[Config], None],
     hub: Hub,
     speak_test: Callable[[str], None],
+    get_status: Callable[[], dict],
+    control: Callable[[str], None],
 ) -> FastAPI:
     app = FastAPI()
     app.add_middleware(LocalOnly)
@@ -145,6 +147,29 @@ def create_app(
     @app.get("/settings")
     def settings():
         return _page("settings.html")
+
+    @app.get("/dock")
+    def dock():
+        return _page("dock.html")
+
+    @app.get("/api/status")
+    def read_status():
+        try:
+            return get_status()
+        except Exception as e:
+            return {"error": str(e)}
+
+    @app.post("/api/control")
+    async def post_control(request: Request):
+        try:
+            body = await request.json()
+        except ValueError:
+            body = None
+        action = body.get("action") if isinstance(body, dict) else None
+        if action not in ("pause", "resume", "skip"):
+            return JSONResponse({"errors": ["action must be pause, resume or skip"]}, status_code=422)
+        control(action)
+        return {"ok": True}
 
     @app.get("/api/config")
     def read_config():

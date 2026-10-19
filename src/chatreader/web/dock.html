@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>chatreader dock</title>
+<style>
+  :root {
+    --bg: #17181b; --card: #1e1f23; --field: #141518; --chip: #26272c; --line: #2a2b30; --line2: #33343a;
+    --text: #e7e6e3; --muted: #8a8a8f; --acc: #f0b35a; --ok: #6fcf8f; --warn: #f0b35a; --err: #ef7a7a; --off: #5a5b60;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 12px; background: var(--bg); color: var(--text); font: 13px/1.4 system-ui, "Segoe UI", sans-serif; display: flex; flex-direction: column; gap: 12px; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .row .name { flex: 1; min-width: 0; }
+  .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--off); }
+  .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.err { background: var(--err); }
+  .state { font: 12px var(--mono); color: var(--muted); text-align: right; overflow-wrap: anywhere; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { flex: 1 1 80px; background: var(--chip); border: 1px solid var(--line2); border-radius: 8px; padding: 8px 10px; font-weight: 500; }
+  .btn:hover { background: #2f3036; }
+  label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 12px; }
+  input[type=text] { width: 100%; background: var(--field); border: 1px solid var(--line2); border-radius: 8px; padding: 8px 10px; font: 12px var(--mono); }
+  input[type=text]:focus { border-color: var(--acc); }
+  input[type=range] { width: 100%; accent-color: var(--acc); }
+  .err-text { color: var(--err); font-size: 12px; }
+  .err-text:empty { display: none; }
+  #banner { color: var(--err); font-size: 12px; }
+  #banner[hidden] { display: none; }
+  a { color: var(--acc); font-size: 12px; }
+</style>
+
+<div id="banner" role="alert" hidden>ChatReader not reachable</div>
+
+<div class="card" aria-label="Status">
+  <div class="row"><span class="dot" id="d-twitch"></span><span class="name">Twitch</span><span class="state" id="st-twitch">…</span></div>
+  <div class="row"><span class="dot" id="d-youtube"></span><span class="name">YouTube</span><span class="state" id="st-youtube">…</span></div>
+  <div class="row"><span class="dot" id="d-overlay"></span><span class="name">OBS overlay</span><span class="state" id="st-overlay">…</span></div>
+  <div class="row"><span class="dot" id="d-model"></span><span class="name">Voice model</span><span class="state" id="st-model">…</span></div>
+  <div class="row"><span class="name">Queue</span><span class="state" id="st-queue">0</span></div>
+</div>
+
+<div class="btns">
+  <button type="button" class="btn" id="btn-pause">Pause</button>
+  <button type="button" class="btn" id="btn-skip">Skip</button>
+  <button type="button" class="btn" id="btn-test">Test voice</button>
+</div>
+
+<div class="card">
+  <label for="yt-input">YouTube video link or ID, or channel @handle
+    <input type="text" id="yt-input" autocomplete="off" spellcheck="false" placeholder="youtube.com/watch?v=…">
+  </label>
+  <div class="err-text" id="yt-err" role="alert"></div>
+</div>
+
+<div class="card">
+  <label for="speed-input">Speed <span id="speed-val">1.0×</span>
+    <input type="range" id="speed-input" min="0.8" max="1.4" step="0.05">
+  </label>
+  <div class="err-text" id="speed-err" role="alert"></div>
+</div>
+
+<a href="/settings" target="_blank" rel="noopener">Full settings</a>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const SAMPLES = { pt: "Olá, este é um teste de voz.", en: "Hello, this is a voice test." };
+let paused = false;
+
+function row(name, text, level) {
+  $("st-" + name).textContent = text;
+  $("d-" + name).className = "dot " + level;
+}
+
+function render(s) {
+  const src = (name, label) => {
+    const x = s.sources[name];
+    if (!x.configured) return row(name, "off", "");
+    row(name, x.state, x.state === "connected" ? "ok" : ["failed", "error"].includes(x.state) ? "err" : "warn");
+  };
+  src("twitch"); src("youtube");
+  row("overlay", s.overlay ? "connected" : "not connected", s.overlay ? "ok" : "warn");
+  row("model", s.model, s.model === "ready" ? "ok" : s.model === "error" ? "err" : "warn");
+  $("st-queue").textContent = s.queue;
+  paused = s.paused;
+  $("btn-pause").textContent = paused ? "Resume" : "Pause";
+}
+
+async function poll() {
+  try {
+    const r = await fetch("/api/status");
+    const s = await r.json();
+    if (s.error) throw new Error(s.error);
+    render(s);
+    $("banner").hidden = true;
+  } catch {
+    $("banner").hidden = false;
+  }
+}
+
+async function post(url, body) {
+  return fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+}
+
+$("btn-pause").onclick = async () => { await post("/api/control", { action: paused ? "resume" : "pause" }); poll(); };
+$("btn-skip").onclick = async () => { await post("/api/control", { action: "skip" }); poll(); };
+$("btn-test").onclick = async () => {
+  const cfg = await (await fetch("/api/config")).json();
+  post("/api/test", { text: SAMPLES[cfg.default_lang] || SAMPLES.pt });
+};
+
+async function saveKeys(changes, errBox) {
+  errBox.textContent = "";
+  const cfg = await (await fetch("/api/config")).json();
+  Object.assign(cfg, changes);
+  const r = await fetch("/api/config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cfg) });
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({}));
+    errBox.textContent = (body.errors || ["Save failed"]).join(" ");
+  }
+  return r.ok;
+}
+
+$("speed-input").oninput = (e) => { $("speed-val").textContent = Number(e.target.value).toFixed(2).replace(/0$/, "") + "×"; };
+$("speed-input").onchange = (e) => saveKeys({ speed: Number(e.target.value) }, $("speed-err"));
+$("yt-input").onchange = (e) => {
+  const v = e.target.value.trim();
+  // a channel (@handle, UC... ID or channel link) is followed automatically; a video link or ID is used as is
+  const isChannel = /^@|^UC[\w-]{22}$|youtube\.com\/(@|channel\/)/.test(v);
+  saveKeys(isChannel ? { youtube_channel: v, youtube_video_id: "" } : { youtube_video_id: v }, $("yt-err"));
+};
+
+fetch("/api/config").then((r) => r.json()).then((c) => { $("yt-input").value = c.youtube_video_id || c.youtube_channel || ""; $("speed-input").value = c.speed; $("speed-val").textContent = Number(c.speed).toFixed(2).replace(/0$/, "") + "×"; }).catch(() => {});
+poll();
+setInterval(poll, 1000);
+</script>
+</html>
