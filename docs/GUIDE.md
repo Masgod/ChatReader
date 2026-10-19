@@ -2,7 +2,7 @@
 
 ChatReader reads your **Twitch** and **YouTube** live chat out loud, in Portuguese (BR) and English. It runs on your PC, hides in the Windows system tray, and sends the voice to **OBS** so you can control its volume like any other source.
 
-- [1. Install](#1-install)
+- [1. Install](#1-install) (packaged app or from source)
 - [2. First start](#2-first-start)
 - [3. Add it to OBS](#3-add-it-to-obs)
 - [3b. Control it from OBS](#3b-control-it-from-obs)
@@ -18,6 +18,18 @@ ChatReader reads your **Twitch** and **YouTube** live chat out loud, in Portugue
 ---
 
 ## 1. Install
+
+### Option A: the packaged app (no Python)
+
+Unzip `ChatReader-<version>-win64.zip` anywhere and run `ChatReader.exe`. Nothing else to install. A purple icon appears in the taskbar tray, the control center opens in your browser, and the voice model (about 120 MB) downloads on first run. Your settings, log and voice model live in `%APPDATA%\ChatReader`.
+
+- Windows may show "Windows protected your PC" because the app is not signed. Choose **More info**, then **Run anyway**. You can verify the download with the `.sha256` file next to the zip (`certutil -hashfile ChatReader-<version>-win64.zip SHA256`).
+- Run it a second time and it just opens the control center of the copy that is already running.
+- **Start with Windows** (Settings, System) adds an entry for the current user. Turn it off there, or in Task Manager's Startup tab.
+- `ChatReader.exe --check` runs a quick self test and prints one line of JSON (exit code 0 means ok).
+- The zip bundles components under several licences, including GPL-3.0 ones (see `THIRD_PARTY_NOTICES.txt`). Read it before you share the zip.
+
+### Option B: from source
 
 You need Windows 10/11, [Python 3.11+](https://www.python.org/downloads/) and [uv](https://docs.astral.sh/uv/).
 
@@ -201,10 +213,12 @@ Put a shortcut to that command on your desktop, or just turn on **Start with Win
 | **Settings won't save** | A red box lists what to fix, for example a Twitch name must be 3–25 letters, digits or `_`. |
 | **Config broke** | A file ChatReader can't read is renamed `config.toml.bad` and defaults load. Delete `config.toml` to start fresh. |
 | **Game stutters** | Lower **CPU threads** in settings (System), at the cost of slower speech. Restart ChatReader afterwards. |
+| **Windows says "protected your PC" or antivirus flags the exe** | The app is unsigned. Choose More info, Run anyway; compare the zip with its `.sha256` file; if your antivirus quarantines it, restore it and add the folder as an exception, or build it yourself (`packaging/README.md`). |
+| **Starting it again does nothing** | That is on purpose: a second start opens the control center of the running copy. |
 | **Dock says "ChatReader not reachable"** | ChatReader is not running, or uses another port. Check the tray icon and that the dock URL has your port. |
 
 ## 11. Before you monetize
 
-- The Kokoro model and code are permissively licensed (Apache-2.0 / MIT). The Portuguese voices' own training data isn't documented. If your stream earns money, ask the model's author or get legal advice. Details are in the README under *Voice licences*.
+- The Kokoro model and code are permissively licensed (Apache-2.0 / MIT), but the phonemizer it needs (phonemizer, espeak-ng) is GPL-3.0. Using ChatReader yourself is fine; if you share the built zip with others, read `THIRD_PARTY_NOTICES.txt` first, because redistribution comes with GPL obligations. The Portuguese voices' own training data isn't documented. If your stream earns money, ask the model's author or get legal advice. Details are in the README under *Voice licences*.
 - Twitch chat is read from the public chat feed, and YouTube chat is read by scraping the public page. Check each platform's terms for your use.
 - Everything runs locally and the server only listens on your own PC (`127.0.0.1`).
