@@ -58,6 +58,10 @@ The app lives in the system tray (purple circle icon). Set `CHATREADER_HOME` to 
 
 Open the overlay in one place only. Only one overlay connection is supported.
 
+## OBS dock and status API
+
+Add `http://127.0.0.1:8765/dock` in OBS under Docks, Custom Browser Docks for a compact control panel (status, Pause/Resume, Skip, Test voice, speed, YouTube field). It uses `GET /api/status` (sources, overlay, model, queue, paused) and `POST /api/control` (`{"action": "pause" | "resume" | "skip"}`). Both are protected like the rest of the local server. Long messages start speaking after their first sentence is synthesized (sentence prefetch).
+
 ## Settings page and tray menu
 
 The settings page is at `http://127.0.0.1:8765/settings`. It opens on first run and from the tray menu ("Settings..."). It edits every key in the table below. Saving writes `config.toml` and applies the change immediately. Filters and voices apply at once. Changing the Twitch channel or YouTube video ID reconnects that source. Invalid values are rejected with a message, and the previous config stays active. The **Test voice** button speaks a sample line with the selected voice.
@@ -109,7 +113,7 @@ The file uses the defaults below when a key is missing. Keys that are not known 
 
 Automated:
 
-- `uv run pytest -q -m "not slow"`: 100 passed.
+- `uv run pytest -q -m "not slow"`: 160 passed.
 
 Headless smoke launch with an empty config folder:
 
@@ -130,7 +134,7 @@ The following checks need live chat, OBS and a running game. They have not been 
 ## Known limits and risks
 
 - `pytchat` scrapes YouTube and can break when YouTube changes. `sources/youtube.py` is isolated. The official YouTube API is a possible fallback; it is not implemented.
-- Measured on this PC with 2 CPU threads: about 0.65 s of compute per second of audio, so a 3 s message takes about 2 s to synthesize. It keeps up in steady state but adds latency. The thread count is `THREADS` in `tts.py`.
+- Measured on this PC with 2 CPU threads: about 0.65 s of compute per second of audio, so a 3 s message takes about 2 s to synthesize. It keeps up in steady state but adds latency. The thread count is the `cpu_threads` setting.
 - CPU use while a game runs has not been measured.
 - Runs of 10 or more identical characters (for example "kkkkkkkkkk") are dropped as spam.
 - Only one overlay connection is supported. A second connection takes over the audio.
