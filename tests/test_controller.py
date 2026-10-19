@@ -1,8 +1,10 @@
+import pytest
 import threading
 from dataclasses import replace
 
 from chatreader.config import Config
 from chatreader.controller import Controller
+from chatreader.events import EventLog
 from chatreader.filters import FilterState
 from chatreader.models import Msg
 
@@ -16,8 +18,9 @@ class FakePlayer:
         self.paused = False
         self.pending = 0
 
-    def submit(self, text, lang):
+    def submit(self, text, lang, user=""):
         self.submitted.append((text, lang))
+        self.users = getattr(self, "users", []) + [user]
 
     def set_maxsize(self, n):
         self.calls.append(("maxsize", n))
@@ -98,11 +101,11 @@ class FakeSource:
         self.stopped.append(value)
 
 
-def make(cfg=None):
+def make(cfg=None, events=None):
     cfg = cfg or Config(twitch_channel="chan", youtube_video_id="")
     player, tts = FakePlayer(), FakeTTS()
     tw, yt = FakeSource(), FakeSource()
-    c = Controller(cfg, player, tts, {"twitch": tw, "youtube": yt})
+    c = Controller(cfg, player, tts, {"twitch": tw, "youtube": yt}, events)
     return c, player, tts, tw, yt
 
 
@@ -202,7 +205,7 @@ def test_pause_resume_skip_speak_test():
 def test_on_msg_exception_is_isolated():
     c, player, *_ = make()
 
-    def flaky(text, lang):
+    def flaky(text, lang, user=""):
         if "boom" in text:
             raise RuntimeError("x")
         player.submitted.append((text, lang))
@@ -292,3 +295,58 @@ def test_paused_property_reflects_player():
     assert c.paused is False
     p.paused = True
     assert c.paused is True
+
+
+def _outcomes(events):
+    return [(e["user"], e["outcome"]) for e in events.since(0)["events"] if e["kind"] == "chat"]
+
+
+@pytest.mark.parametrize(
+    "user,text,reason",
+    [
+        ("nightbot", "hello everyone there", "ignored user"),
+        ("bob", "!command", "command"),
+        ("bob", "see https://x.com now", "link"),
+        ("bob", "...", "no text"),
+        ("bob", "Kappa Kappa Kappa Kappa Kappa", "spam"),
+    ],
+)
+def test_each_filter_reason_is_recorded(user, text, reason):
+    events = EventLog()
+    c, player, *_ = make(events=events)
+    c.on_msg(Msg("twitch", user, text, 0.0))
+    assert _outcomes(events) == [(user, f"skipped:{reason}")] and player.submitted == []
+    e = events.since(0)["events"][0]
+    assert e["text"] == text
+
+
+def test_repeat_is_recorded():
+    events = EventLog()
+    c, *_ = make(events=events)
+    c.on_msg(Msg("twitch", "bob", "boa jogada pessoal", 0.0))
+    c.on_msg(Msg("twitch", "bob", "boa jogada pessoal", 0.0))
+    assert _outcomes(events) == [("bob", "queued"), ("bob", "skipped:repeat")]
+
+
+def test_accepted_message_recorded_as_queued_with_user():
+    events = EventLog()
+    c, player, *_ = make(events=events)
+    c.on_msg(Msg("twitch", "alice", "eu gostei muito dessa jogada", 0.0))
+    assert _outcomes(events) == [("alice", "queued")] and player.users == ["alice"]
+
+
+def test_record_item_event():
+    from chatreader.player import QueueItem
+
+    events = EventLog()
+    c, *_ = make(events=events)
+    c.record_item_event(QueueItem(7, "oi", "pt", "ana"), "played")
+    e = events.since(0)["events"][0]
+    assert (e["kind"], e["user"], e["text"], e["outcome"]) == ("chat", "ana", "oi", "played")
+
+
+def test_events_optional():
+    c, player, *_ = make()
+    c.on_msg(Msg("twitch", "alice", "eu gostei muito dessa jogada", 0.0))
+    c.record_item_event(__import__("chatreader.player", fromlist=["QueueItem"]).QueueItem(1, "x", "pt", "u"), "played")
+    assert len(player.submitted) == 1

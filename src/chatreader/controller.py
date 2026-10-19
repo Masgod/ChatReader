@@ -4,7 +4,7 @@ import threading
 from typing import Callable
 
 from chatreader.config import Config
-from chatreader.filters import FilterState, apply
+from chatreader.filters import FilterState, apply, explain
 from chatreader.lang import detect_lang, spoken_text
 from chatreader.models import Msg
 
@@ -16,11 +16,12 @@ _JOIN_TIMEOUT = 1.0
 
 
 class Controller:
-    def __init__(self, cfg: Config, player, tts, source_factories: dict[str, Callable]):
+    def __init__(self, cfg: Config, player, tts, source_factories: dict[str, Callable], events=None):
         self.cfg = cfg
         self._player = player
         self._tts = tts
         self._factories = source_factories
+        self._events = events  # optional EventLog; chat outcomes are recorded when set
         self._lock = threading.Lock()  # guards cfg, filter state and the running-source table
         self._filter_state = FilterState(size=cfg.repeat_window)
         self._running: dict[str, tuple[threading.Thread, threading.Event]] = {}
@@ -30,13 +31,25 @@ class Controller:
         try:
             with self._lock:
                 cfg = self.cfg
+                reason = explain(msg, cfg, self._filter_state)
+                original = msg
                 msg = apply(msg, cfg, self._filter_state)
             if msg is None:
+                self._record(original.user, original.text, f"skipped:{reason}" if reason else "skipped")
                 return
             lang = detect_lang(msg.text, cfg.default_lang)
-            self._player.submit(spoken_text(msg, lang, cfg.announce_user), lang)
+            self._player.submit(spoken_text(msg, lang, cfg.announce_user), lang, msg.user)
+            self._record(msg.user, msg.text, "queued")
         except Exception:
             log.exception("message dropped")
+
+    def _record(self, user: str, text: str, outcome: str) -> None:
+        if self._events is not None:
+            self._events.add("chat", "info", user=user, text=text, outcome=outcome)
+
+    def record_item_event(self, item, outcome: str) -> None:
+        """Player callback: a queued item was played, failed, skipped, removed or dropped."""
+        self._record(item.user, item.text, outcome)
 
     def start(self) -> None:
         with self._lock:
@@ -107,7 +120,7 @@ class Controller:
 
     def speak_test(self, text: str) -> None:
         lang = detect_lang(text, self.cfg.default_lang)
-        self._player.submit(text, lang)
+        self._player.submit(text, lang, "test")
 
     def shutdown(self) -> None:
         with self._lock:
