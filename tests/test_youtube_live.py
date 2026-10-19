@@ -87,3 +87,20 @@ def test_returns_to_waiting_after_stream_ends(monkeypatch):
     monkeypatch.setattr(youtube, "run_with_backoff", lambda *a, **k: None)  # stream ends at once
     youtube.run_youtube("", lambda m: None, stop, lambda s: None, channel="@x", resolver=resolver, poll_seconds=0.01)
     assert len(calls) == 2
+
+
+def test_channel_mode_never_reports_failed(monkeypatch):
+    statuses, stop, n = [], threading.Event(), [0]
+
+    def fake_backoff(fn, stop_, on_status, **kw):
+        on_status("failed")  # chat of the ended stream gave up
+
+    def resolver(c):
+        n[0] += 1
+        if n[0] == 2:
+            stop.set()
+        return "abcdefghijk"
+
+    monkeypatch.setattr(youtube, "run_with_backoff", fake_backoff)
+    youtube.run_youtube("", lambda m: None, stop, statuses.append, channel="@x", resolver=resolver, poll_seconds=0.01)
+    assert "failed" not in statuses and "waiting for live" in statuses

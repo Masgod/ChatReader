@@ -72,7 +72,7 @@ You can keep a small control panel next to your scenes, so you never leave OBS.
 
 The panel shows green, amber or red status for Twitch, YouTube, the OBS overlay and the voice model, plus how many messages are waiting. It has **Pause / Resume**, **Skip**, **Test voice**, a **Speed** slider and a field for your YouTube link or channel.
 
-On first run the settings page also shows a short **Getting started** checklist (voice model ready, a chat source set, OBS overlay connected). It disappears when all three are done.
+On first run the settings page also shows a short **Getting started** checklist (voice model ready, a chat source set, OBS overlay connected). It is shown whenever one of the three is not done (for example when OBS is closed) and disappears when all three are done.
 
 ## 4. Connect your chats
 

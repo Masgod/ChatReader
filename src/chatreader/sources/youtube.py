@@ -72,10 +72,12 @@ def run_youtube(
                     break
                 if stop.wait(poll_seconds):
                     return
+        # an ended stream is not a failure in channel mode: go back to waiting for the next one
+        status = (lambda s: on_status("waiting for live" if s == "failed" else s)) if follow_channel else on_status
         run_with_backoff(
-            lambda: _session(video_id, on_msg, stop, on_status, chat_factory),
+            lambda: _session(video_id, on_msg, stop, status, chat_factory),
             stop,
-            on_status,
+            status,
             max_failures=5,
         )
         if not follow_channel:
