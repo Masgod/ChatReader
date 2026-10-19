@@ -13,7 +13,7 @@ def _create_mutex(name: str):
     return handle, kernel32.GetLastError() == _ERROR_ALREADY_EXISTS
 
 
-def acquire(name: str = "Local\ChatReader", create_mutex=_create_mutex) -> bool:
+def acquire(name: str = r"Local\ChatReader", create_mutex=_create_mutex) -> bool:
     """True when this process is the first instance."""
     handle, exists = create_mutex(name)
     _held.append(handle)
