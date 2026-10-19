@@ -33,15 +33,27 @@ def _truncate(text: str, max_chars: int) -> str:
     return (cut[:space] if space > 0 else cut).rstrip()
 
 
-def apply(msg: Msg, cfg: Config, state: FilterState) -> Msg | None:
+def explain(msg: Msg, cfg: Config, state: FilterState) -> str | None:
+    """Why a message would be dropped, or None if it passes. Never records history."""
     text = msg.text.strip()
-    ignored = {name.lower() for name in cfg.ignored_users}
-    if msg.user.lower() in ignored or text.startswith("!"):
+    if msg.user.lower() in {name.lower() for name in cfg.ignored_users}:
+        return "ignored user"
+    if text.startswith("!"):
+        return "command"
+    if LINK_RE.search(text):
+        return "link"
+    if not any(c.isalnum() for c in text):
+        return "no text"
+    if text in state.recent.get(msg.user, ()):
+        return "repeat"
+    if _is_spam(text):
+        return "spam"
+    return None
+
+
+def apply(msg: Msg, cfg: Config, state: FilterState) -> Msg | None:
+    if explain(msg, cfg, state):
         return None
-    if LINK_RE.search(text) or not any(c.isalnum() for c in text):
-        return None
-    history = state.recent.setdefault(msg.user, deque(maxlen=state.size))
-    if text in history or _is_spam(text):
-        return None
-    history.append(text)
+    text = msg.text.strip()
+    state.recent.setdefault(msg.user, deque(maxlen=state.size)).append(text)
     return replace(msg, text=_truncate(text, cfg.max_chars))
