@@ -258,3 +258,109 @@ def test_set_maxsize_clamps_to_one():
     player.submit("b", "en")
     player.set_maxsize(0)
     assert list(player._queue) == [("b", "en")]
+
+
+def test_split_sentences_cases():
+    from chatreader.player import split_sentences
+
+    assert split_sentences("Oi. Tudo bem? Sim!") == ["Oi.", "Tudo bem?", "Sim!"]
+    assert split_sentences("sem pontuacao") == ["sem pontuacao"]
+    assert split_sentences("...") == ["..."]
+    assert split_sentences("?!") == ["?!"]
+    assert split_sentences("  ") == ["  "]
+    assert split_sentences("a" * 500) == ["a" * 500]
+
+
+def test_message_plays_sentences_in_order():
+    out = FakeOutput()
+    player = Player(synth, out, maxsize=10)
+    player.start()
+    try:
+        player.submit("A. B. C.", "pt")
+        assert wait_until(lambda: len(out.played) == 3)
+        assert out.played == [b"A.", b"B.", b"C."]
+    finally:
+        player.shutdown()
+
+
+def test_next_sentence_synth_overlaps_playback():
+    out = FakeOutput()
+    out.block = True
+    log, inflight, peak = [], [0], [0]
+    lock = threading.Lock()
+
+    def slow_synth(text, lang):
+        with lock:
+            inflight[0] += 1
+            peak[0] = max(peak[0], inflight[0])
+            log.append(text)
+        time.sleep(0.05)
+        with lock:
+            inflight[0] -= 1
+        return text.encode()
+
+    player = Player(slow_synth, out, maxsize=10)
+    player.start()
+    try:
+        player.submit("A. B. C.", "pt")
+        assert out.started.wait(WAIT)  # sentence 1 is playing (blocked)
+        assert wait_until(lambda: "B." in log)  # sentence 2 synthesizes meanwhile
+        assert out.played == [b"A."]
+        assert peak[0] == 1
+    finally:
+        player.shutdown()
+
+
+def test_skip_drops_remaining_sentences():
+    out = FakeOutput()
+    out.block = True
+    player = Player(synth, out, maxsize=10)
+    player.start()
+    try:
+        player.submit("A. B. C.", "pt")
+        assert out.started.wait(WAIT)
+        out.block = False
+        player.skip()
+        player.submit("next", "pt")
+        assert wait_until(lambda: b"next" in out.played)
+        assert b"B." not in out.played and b"C." not in out.played
+    finally:
+        player.shutdown()
+
+
+def test_shutdown_during_prefetch_exits_cleanly():
+    out = FakeOutput()
+    out.block = True
+    gate = threading.Event()
+
+    def gated(text, lang):
+        if text == "B.":
+            gate.wait(5)
+        return text.encode()
+
+    player = Player(gated, out, maxsize=10)
+    player.start()
+    player.submit("A. B.", "pt")
+    assert out.started.wait(WAIT)
+    start = time.monotonic()
+    gate.set()
+    player.shutdown()
+    assert time.monotonic() - start < 3
+
+
+def test_failed_later_sentence_skips_only_it():
+    out = FakeOutput()
+
+    def flaky(text, lang):
+        if text == "B.":
+            raise RuntimeError("boom")
+        return text.encode()
+
+    player = Player(flaky, out, maxsize=10)
+    player.start()
+    try:
+        player.submit("A. B. C.", "pt")
+        assert wait_until(lambda: len(out.played) == 2)
+        assert out.played == [b"A.", b"C."]
+    finally:
+        player.shutdown()
