@@ -1,0 +1,39 @@
+[project]
+name = "chatreader"
+version = "0.1.0"
+description = "Windows tray app that reads Twitch and YouTube chat aloud with Piper TTS"
+requires-python = ">=3.11"
+dependencies = [
+    "piper-tts",
+    "lingua-language-detector",
+    "pytchat",
+    "websockets",
+    "fastapi",
+    "uvicorn",
+    "pystray",
+    "Pillow",
+    "tomli-w",
+]
+
+[project.scripts]
+chatreader = "chatreader.main:main"
+
+[project.gui-scripts]
+chatreader-tray = "chatreader.main:main"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "httpx",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/chatreader"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: needs downloaded Piper voices in ./voices"]
