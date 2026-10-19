@@ -286,3 +286,11 @@ def test_control_rejects_bad_requests(env):
     assert client.post("/api/control", json={"action": "skip"}, headers={"Origin": "http://evil.example"}).status_code == 403
     assert client.post("/api/control", content='{"action":"skip"}', headers={"Content-Type": "text/plain"}).status_code == 403
     assert hub.actions == []
+
+
+def test_dock_page_has_required_controls(env):
+    client, *_ = env
+    body = client.get("/dock").text
+    for ident in ("st-twitch", "st-youtube", "st-overlay", "st-model", "btn-pause", "btn-skip", "btn-test", "yt-input"):
+        assert f'id="{ident}"' in body
+    assert 'href="/settings"' in body
