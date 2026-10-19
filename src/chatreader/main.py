@@ -83,7 +83,10 @@ def main() -> None:
         nonlocal stop_server
         icon.visible = True
         try:
-            app_obj = create_app(lambda: controller.cfg, apply_config, hub, controller.speak_test)
+            app_obj = create_app(
+                lambda: controller.cfg, apply_config, hub, controller.speak_test,
+                controller.snapshot, lambda action: getattr(controller, action)(),
+            )
             stop_server = run_server(app_obj, cfg.port)  # raises if the port is taken
             if first_run:
                 webbrowser.open(f"{base}/settings")

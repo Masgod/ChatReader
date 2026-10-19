@@ -37,7 +37,8 @@ def wait_for(cond, timeout=5.0):
 def env():
     applied, spoken = [], []
     hub = Hub()
-    app = create_app(lambda: Config(), applied.append, hub, spoken.append)
+    hub.actions = []
+    app = create_app(lambda: Config(), applied.append, hub, spoken.append, lambda: {"queue": 3}, hub.actions.append)
     with TestClient(app, base_url="http://127.0.0.1") as client:
         yield client, hub, applied, spoken
 
@@ -103,7 +104,7 @@ def test_put_empty_channel_is_ok(env):
 
 def test_overlay_and_settings_pages_served(env):
     client, *_ = env
-    for path in ("/overlay", "/settings"):
+    for path in ("/overlay", "/settings", "/dock"):
         r = client.get(path)
         assert r.status_code == 200
         assert r.headers["content-type"].startswith("text/html")
@@ -237,7 +238,7 @@ def test_put_returns_500_when_apply_fails():
     def boom(cfg):
         raise OSError("disk full")
 
-    with TestClient(create_app(lambda: Config(), boom, Hub(), lambda t: None), base_url="http://127.0.0.1") as client:
+    with TestClient(create_app(lambda: Config(), boom, Hub(), lambda t: None, lambda: {}, lambda a: None), base_url="http://127.0.0.1") as client:
         r = client.put("/api/config", json=asdict(Config()))
     assert r.status_code == 500 and "disk full" in r.json()["errors"][0]
 
@@ -252,3 +253,36 @@ def test_foreign_origin_host_and_non_json_rejected(env):
         with client.websocket_connect("/ws", headers={"host": "127.0.0.1", "origin": "http://evil.example"}):
             pass
     assert spoken == []
+
+
+def test_status_returns_snapshot(env):
+    client, *_ = env
+    r = client.get("/api/status")
+    assert r.status_code == 200 and r.json() == {"queue": 3}
+
+
+def test_status_survives_exception():
+    def boom():
+        raise RuntimeError("nope")
+
+    app = create_app(lambda: Config(), lambda c: None, Hub(), lambda t: None, boom, lambda a: None)
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        r = client.get("/api/status")
+    assert r.status_code == 200 and "error" in r.json()
+
+
+@pytest.mark.parametrize("action", ["pause", "resume", "skip"])
+def test_control_calls_action(env, action):
+    client, hub, *_ = env
+    r = client.post("/api/control", json={"action": action})
+    assert r.status_code == 200 and r.json() == {"ok": True}
+    assert hub.actions == [action]
+
+
+def test_control_rejects_bad_requests(env):
+    client, hub, *_ = env
+    assert client.post("/api/control", json={"action": "explode"}).status_code == 422
+    assert client.post("/api/control", content="not json", headers={"Content-Type": "application/json"}).status_code == 422
+    assert client.post("/api/control", json={"action": "skip"}, headers={"Origin": "http://evil.example"}).status_code == 403
+    assert client.post("/api/control", content='{"action":"skip"}', headers={"Content-Type": "text/plain"}).status_code == 403
+    assert hub.actions == []

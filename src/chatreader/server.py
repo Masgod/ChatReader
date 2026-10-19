@@ -134,6 +134,8 @@ def create_app(
     apply_config: Callable[[Config], None],
     hub: Hub,
     speak_test: Callable[[str], None],
+    get_status: Callable[[], dict],
+    control: Callable[[str], None],
 ) -> FastAPI:
     app = FastAPI()
     app.add_middleware(LocalOnly)
@@ -145,6 +147,29 @@ def create_app(
     @app.get("/settings")
     def settings():
         return _page("settings.html")
+
+    @app.get("/dock")
+    def dock():
+        return _page("dock.html")
+
+    @app.get("/api/status")
+    def read_status():
+        try:
+            return get_status()
+        except Exception as e:
+            return {"error": str(e)}
+
+    @app.post("/api/control")
+    async def post_control(request: Request):
+        try:
+            body = await request.json()
+        except ValueError:
+            body = None
+        action = body.get("action") if isinstance(body, dict) else None
+        if action not in ("pause", "resume", "skip"):
+            return JSONResponse({"errors": ["action must be pause, resume or skip"]}, status_code=422)
+        control(action)
+        return {"ok": True}
 
     @app.get("/api/config")
     def read_config():
