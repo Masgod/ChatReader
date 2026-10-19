@@ -2,102 +2,87 @@ import io
 import wave
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from chatreader.config import Config
-from chatreader.tts import PiperTTS, ensure_voices, voice_urls
-
-BASE = "https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium"
+from chatreader.tts import MODEL_FILE, VOICES_FILE, KokoroTTS, ensure_models
 
 
-def test_voice_urls():
-    assert voice_urls("pt_BR-faber-medium") == (BASE + ".onnx", BASE + ".onnx.json")
+class FakeKokoro:
+    def __init__(self):
+        self.calls = []
+
+    def get_voices(self):
+        return ["pf_dora", "af_heart", "af_bella"]
+
+    def create(self, text, voice, speed, lang):
+        self.calls.append((text, voice, lang))
+        return np.zeros(2400, dtype=np.float32), 24000
 
 
-def test_ensure_voices_skips_existing_and_reports_failures(tmp_path):
-    for ext in (".onnx", ".onnx.json"):
-        (tmp_path / f"en_US-have-medium{ext}").write_bytes(b"x")
+def _files(tmp_path):
+    (tmp_path / MODEL_FILE).write_bytes(b"x")
+    (tmp_path / VOICES_FILE).write_bytes(b"x")
+
+
+def test_ensure_models_skips_existing_and_reports_failures(tmp_path):
+    (tmp_path / MODEL_FILE).write_bytes(b"x")
     calls = []
 
     def download(url, dest):
         calls.append(dest.name)
-        if "bad" in url:
-            raise OSError("boom")
-        dest.write_bytes(b"x")
+        raise OSError("boom")
 
-    failed = ensure_voices(tmp_path, ["en_US-have-medium", "xx_YY-bad-medium"], download)
-    assert failed == ["xx_YY-bad-medium"]
-    assert not any(c.startswith("en_US-have") for c in calls)
+    assert ensure_models(tmp_path, download) == [VOICES_FILE]
+    assert calls == [VOICES_FILE]
 
 
-class FakeVoice:
-    def __init__(self, tag):
-        self.tag = tag
-
-    def synthesize_wav(self, text, wav):
-        wav.setnchannels(1)
-        wav.setsampwidth(2)
-        wav.setframerate(22050)
-        wav.writeframes(self.tag.encode()[:2] * 2)
-
-
-def test_synth_falls_back_to_other_voice(tmp_path):
-    _fake(tmp_path, ["en_US-lessac-medium"], ["en_US-lessac-medium"])
-    warnings = []
-    tts = PiperTTS(tmp_path, Config(), warnings.append, loader=lambda p: FakeVoice(Path(p).stem))
+def test_synth_returns_wav_with_voice_and_language(tmp_path):
+    _files(tmp_path)
+    fake = FakeKokoro()
+    tts = KokoroTTS(tmp_path, Config(), lambda m: None, loader=lambda m, v: fake)
     data = tts.synth("oi", "pt")
-    assert data.startswith(b"RIFF")
+    tts.synth("hi", "en")
     with wave.open(io.BytesIO(data)) as w:
-        assert w.readframes(10).startswith(b"en")
-    assert len(warnings) == 1
+        assert w.getframerate() == 24000 and w.getnframes() == 2400
+    assert fake.calls == [("oi", "pf_dora", "pt-br"), ("hi", "af_heart", "en-us")]
 
 
-@pytest.mark.slow
-def test_real_piper_returns_wav():
-    voices = Path("voices")
-    cfg = Config()
-    if not (voices / f"{cfg.voice_en}.onnx").exists():
-        pytest.skip("voices not downloaded")
-    data = PiperTTS(voices, cfg, lambda m: None).synth("hello there", "en")
-    assert data.startswith(b"RIFF") and len(data) > 1000
-
-
-def _fake(tmp_path, names, with_json=()):
-    for n in names:
-        (tmp_path / f"{n}.onnx").write_bytes(b"x")
-    for n in with_json:
-        (tmp_path / f"{n}.onnx.json").write_bytes(b"x")
-
-
-def test_missing_json_is_skipped_with_warning(tmp_path):
-    _fake(tmp_path, ["pt_BR-faber-medium", "en_US-lessac-medium"], ["en_US-lessac-medium"])
+def test_unknown_voice_is_skipped_with_warning(tmp_path):
+    _files(tmp_path)
     warnings = []
-    tts = PiperTTS(tmp_path, Config(), warnings.append, loader=lambda p: FakeVoice(Path(p).stem))
-    assert len(warnings) == 1
-    with wave.open(io.BytesIO(tts.synth("oi", "pt"))) as w:
-        assert w.readframes(10).startswith(b"en")
-    assert len(warnings) == 2  # fallback warning
+    tts = KokoroTTS(tmp_path, Config(voice_pt="zz_nope"), warnings.append, loader=lambda m, v: FakeKokoro())
+    assert any("zz_nope" in w for w in warnings)
+    with pytest.raises(RuntimeError):
+        tts.synth("oi", "pt")
+    assert tts.synth("hi", "en").startswith(b"RIFF")
 
 
-def test_loader_failure_is_skipped_with_warning(tmp_path):
-    names = ["pt_BR-faber-medium", "en_US-lessac-medium"]
-    _fake(tmp_path, names, names)
-
-    def loader(p):
-        if "faber" in str(p):
-            raise RuntimeError("corrupt")
-        return FakeVoice(Path(p).stem)
-
-    warnings = []
-    tts = PiperTTS(tmp_path, Config(), warnings.append, loader=loader)
-    assert len(warnings) == 1
+def test_missing_files_then_reload_after_download(tmp_path):
+    tts = KokoroTTS(tmp_path, Config(), lambda m: None, loader=lambda m, v: FakeKokoro())
+    with pytest.raises(RuntimeError):
+        tts.synth("oi", "pt")
+    _files(tmp_path)
+    tts.reload(Config())
     assert tts.synth("oi", "pt").startswith(b"RIFF")
 
 
-def test_invalid_voice_names_rejected(tmp_path):
-    for bad in ["../x", "a\b-c-d", "pt_BR-faber-medium/../../x", ""]:
-        with pytest.raises(ValueError):
-            voice_urls(bad)
+def test_loader_failure_warns(tmp_path):
+    _files(tmp_path)
     warnings = []
-    PiperTTS(tmp_path, Config(voice_pt="../x"), warnings.append, loader=lambda p: None)
-    assert any("invalid" in w for w in warnings)
+
+    def boom(m, v):
+        raise RuntimeError("corrupt")
+
+    KokoroTTS(tmp_path, Config(), warnings.append, loader=boom)
+    assert any("corrupt" in w for w in warnings)
+
+
+@pytest.mark.slow
+def test_real_kokoro_returns_wav():
+    voices = Path("voices")
+    if not (voices / MODEL_FILE).exists():
+        pytest.skip("model files not downloaded")
+    data = KokoroTTS(voices, Config(), print).synth("Olá, tudo bem?", "pt")
+    assert data.startswith(b"RIFF") and len(data) > 5000

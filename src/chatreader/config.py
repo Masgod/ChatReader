@@ -6,7 +6,7 @@ from pathlib import Path
 import tomli_w
 
 TWITCH_RE = re.compile(r"[a-z0-9_]{3,25}")
-VOICE_NAME_RE = re.compile(r"[A-Za-z0-9_]+-[A-Za-z0-9_]+-[a-z_]+")
+VOICE_NAME_RE = re.compile(r"[a-z]{2}_[a-z0-9]+")
 YOUTUBE_RE = re.compile(r"[A-Za-z0-9_-]{11}")
 YOUTUBE_URL_RE = re.compile(r"(?:v=|youtu\.be/|/live/|/embed/)([A-Za-z0-9_-]{11})")
 
@@ -15,8 +15,8 @@ YOUTUBE_URL_RE = re.compile(r"(?:v=|youtu\.be/|/live/|/embed/)([A-Za-z0-9_-]{11}
 class Config:
     twitch_channel: str = ""
     youtube_video_id: str = ""
-    voice_pt: str = "pt_BR-faber-medium"
-    voice_en: str = "en_US-lessac-medium"
+    voice_pt: str = "pf_dora"
+    voice_en: str = "af_heart"
     default_lang: str = "pt"
     queue_size: int = 20
     max_chars: int = 200
@@ -83,7 +83,7 @@ def validate(cfg: Config) -> list[str]:
         errors.append("repeat_window must be >= 0")
     for attr in ("voice_pt", "voice_en"):
         if not VOICE_NAME_RE.fullmatch(getattr(cfg, attr)):
-            errors.append(f"{attr} must look like pt_BR-faber-medium")
+            errors.append(f"{attr} must look like pf_dora")
     if not 1 <= cfg.port <= 65535:
         errors.append("port must be between 1 and 65535")
     if cfg.default_lang not in ("pt", "en"):

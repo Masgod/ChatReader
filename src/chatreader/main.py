@@ -13,7 +13,7 @@ from chatreader.player import Player
 from chatreader.server import Hub, create_app, run_server
 from chatreader.sources.twitch import run_twitch
 from chatreader.sources.youtube import run_youtube
-from chatreader.tts import PiperTTS, ensure_voices
+from chatreader.tts import KokoroTTS, ensure_models
 
 
 def _setup_logging(app: Path, debug: bool) -> None:
@@ -67,7 +67,7 @@ def main() -> None:
 
     hub = Hub()
     voices = app / "voices"
-    tts = PiperTTS(voices, cfg, on_warning=lambda m: (log.warning(m), notify(m)))
+    tts = KokoroTTS(voices, cfg, on_warning=lambda m: (log.warning(m), notify(m)))
     player = Player(tts.synth, hub, cfg.queue_size)
     controller = Controller(cfg, player, tts, {"twitch": run_twitch, "youtube": run_youtube})
     apply_config = make_apply(
@@ -87,10 +87,9 @@ def main() -> None:
             stop_server = run_server(app_obj, cfg.port)  # raises if the port is taken
             if first_run:
                 webbrowser.open(f"{base}/settings")
-            cur = controller.cfg  # the user may have saved settings while the page was open
-            failed = ensure_voices(voices, [cur.voice_pt, cur.voice_en])
+            failed = ensure_models(voices)
             if failed:
-                icon.notify("Could not download voices: " + ", ".join(failed), "ChatReader")
+                icon.notify("Could not download model files: " + ", ".join(failed), "ChatReader")
             tts.reload(controller.cfg)
             player.start()
             controller.start()
