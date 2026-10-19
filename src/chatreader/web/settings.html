@@ -74,6 +74,11 @@
   .pad { padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
   #errors { margin: 0; padding: 12px 18px 12px 34px; border: 1px solid var(--err); border-radius: 12px; color: var(--err); }
   #errors:empty { display: none; }
+  #checklist[hidden] { display: none; }
+  .chk { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .chk li { color: var(--muted); }
+  .chk li[data-ok="true"] { color: var(--text); }
+  .chk li[data-ok="true"] .mark { color: var(--ok); }
   footer .wrap { display: flex; align-items: center; gap: 10px; padding-block: 14px; }
   #msg { font-size: 13px; color: var(--faint); }
   #msg.dirty { color: var(--acc); } #msg.ok { color: var(--ok); } #msg.bad { color: var(--err); }
@@ -95,6 +100,15 @@
 
 <main class="wrap">
   <ul id="errors" role="alert"></ul>
+
+  <section id="checklist" class="card pad" aria-label="Setup checklist" hidden>
+    <div class="name">Getting started</div>
+    <ul class="chk">
+      <li id="chk-model"><span class="mark" aria-hidden="true">○</span> Voice model ready</li>
+      <li id="chk-source"><span class="mark" aria-hidden="true">○</span> Twitch channel or YouTube video set</li>
+      <li id="chk-overlay"><span class="mark" aria-hidden="true">○</span> OBS overlay connected (add the Browser Source, see the guide)</li>
+    </ul>
+  </section>
 
   <section>
     <h2>Sources</h2>
@@ -251,10 +265,6 @@ function refresh() {
   }));
   $("#ignored-count").textContent = state.ignored_users.length;
 
-  const source = state.twitch_channel ? "twitch.tv/" + state.twitch_channel : state.youtube_video_id ? "YouTube" : "";
-  $("#dot").style.background = source ? "var(--ok)" : "#5a5b60";
-  $("#status-text").textContent = source ? "listening · " + source : "idle · :" + savedPort;
-
   const portChanged = state.port !== savedPort;
   const ph = $("#port-hint");
   ph.textContent = portChanged ? "Restart required to apply" : "Local server · restart required to change";
@@ -317,7 +327,27 @@ $("#save").onclick = async () => {
   } catch { flash("Not saved · server unreachable", "bad"); }
 };
 
-fetch("/api/config").then((r) => r.json()).then(load)
+function renderStatus(s) {
+  const live = Object.entries(s.sources).filter(([, x]) => x.configured && x.state === "connected").map(([n]) => n);
+  const anySource = Object.values(s.sources).some((x) => x.configured);
+  $("#dot").style.background = live.length ? "var(--ok)" : "#5a5b60";
+  $("#status-text").textContent = live.length ? "listening · " + live.join(" + ") : "idle · :" + savedPort;
+  const items = { "chk-model": s.model === "ready", "chk-source": anySource, "chk-overlay": s.overlay };
+  for (const [id, ok] of Object.entries(items)) {
+    const li = $("#" + id); li.dataset.ok = ok; $(".mark", li).textContent = ok ? "✓" : "○";
+  }
+  $("#checklist").hidden = Object.values(items).every(Boolean);
+}
+
+async function pollStatus() {
+  try {
+    const s = await (await fetch("/api/status")).json();
+    if (s.error) throw new Error(s.error);
+    renderStatus(s);
+  } catch { $("#status-text").textContent = "server unreachable"; $("#dot").style.background = "var(--err)"; }
+}
+
+fetch("/api/config").then((r) => r.json()).then(load).then(() => { pollStatus(); setInterval(pollStatus, 2000); })
   .catch(() => { $("#status-text").textContent = "server unreachable"; });
 </script>
 </html>

@@ -294,3 +294,10 @@ def test_dock_page_has_required_controls(env):
     for ident in ("st-twitch", "st-youtube", "st-overlay", "st-model", "btn-pause", "btn-skip", "btn-test", "yt-input"):
         assert f'id="{ident}"' in body
     assert 'href="/settings"' in body
+
+
+def test_settings_page_has_checklist(env):
+    client, *_ = env
+    body = client.get("/settings").text
+    for ident in ("checklist", "chk-model", "chk-source", "chk-overlay"):
+        assert f'id="{ident}"' in body
