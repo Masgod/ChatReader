@@ -68,6 +68,7 @@ A stale mutex cannot survive a crashed process (Windows frees it), so there is n
 - `packaging/chatreader.spec`: entry `chatreader/__main__.py`, `console=False`, the app icon (generated from the same drawing as the tray icon at build time into `packaging/icon.ico`), `datas` for `src/chatreader/web`, and `collect_all` for `kokoro_onnx`, `espeakng_loader`, `lingua` (language data), `pytchat`, plus hidden imports for `uvicorn` protocol modules and `pystray._win32`.
 - `packaging/build.py`: runs PyInstaller with the spec, copies `THIRD_PARTY_NOTICES.txt` and a short `README.txt` into the output, and zips `dist/ChatReader/` to `dist/ChatReader-<version>-win64.zip`. The version comes from `pyproject.toml`.
 - `uv run --group build python packaging/build.py` is the one build command.
+- Antivirus mitigation, part of the build and release notes: use a PyInstaller whose bootloader was compiled locally (`packaging/README.md` documents installing PyInstaller from source with the MSVC build tools; the script works with the stock one too), keep the folder build, write a SHA-256 checksum file next to the zip, and submit each release as a false positive if a vendor flags it. Code signing stays out of scope.
 
 ## Self check
 
