@@ -5,3 +5,6 @@ config.toml.bad
 *.log
 __pycache__/
 .claude/worktrees/
+build/
+dist/
+packaging/icon.ico

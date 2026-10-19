@@ -1,0 +1,48 @@
+ChatReader third-party notices
+==============================
+
+ChatReader's built zip bundles the components below. Each is licensed by its
+authors; the names and upstream locations are listed so you can read the full
+licence texts and obtain the source.
+
+Voice model (downloaded on first run, not in the zip)
+-----------------------------------------------------
+Kokoro-82M, Apache-2.0
+  https://huggingface.co/hexgrad/Kokoro-82M
+ONNX export and voices file used by kokoro-onnx
+  https://github.com/thewh1teagle/kokoro-onnx/releases
+
+Python libraries bundled in the zip
+-----------------------------------
+kokoro-onnx          MIT                      https://github.com/thewh1teagle/kokoro-onnx
+onnxruntime          MIT                      https://github.com/microsoft/onnxruntime
+numpy                BSD-3-Clause and others  https://numpy.org
+lingua-language-detector  Apache-2.0          https://github.com/pemistahl/lingua-py
+pytchat              MIT                      https://github.com/taizan-hokuto/pytchat
+websockets           BSD-3-Clause             https://github.com/python-websockets/websockets
+fastapi              MIT                      https://github.com/fastapi/fastapi
+uvicorn              BSD-3-Clause             https://github.com/encode/uvicorn
+Pillow               MIT-CMU (HPND)           https://python-pillow.org
+tomli-w              MIT                      https://github.com/hukkin/tomli-w
+pystray              LGPL-3.0                 https://github.com/moses-palmer/pystray
+PyInstaller bootloader  GPL-2.0-or-later with the PyInstaller exception, which
+                     allows bundling in any application  https://pyinstaller.org
+
+GPL components (important)
+--------------------------
+The speech engine needs a phonemizer, and the zip therefore also contains:
+
+phonemizer           GPL-3.0-or-later         https://github.com/bootphon/phonemizer
+espeak-ng (via the espeakng-loader package: the espeak-ng library and its data)
+                     GPL-3.0-or-later         https://github.com/espeak-ng/espeak-ng
+                     espeakng-loader          https://github.com/thewh1teagle/espeakng-loader
+
+These are free software under the GNU General Public License version 3 or
+later. You may receive their complete corresponding source from the addresses
+above, and the licence text from https://www.gnu.org/licenses/gpl-3.0.txt.
+Anyone who redistributes this zip takes on the obligations of those licences
+(including providing the source or a written offer for it, and the licence text).
+LGPL-3.0 (pystray): the library ships as separate files in the folder and can be
+replaced with another version.
+
+ChatReader's own source is in the repository this build came from.

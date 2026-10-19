@@ -22,6 +22,9 @@ chatreader = "chatreader.main:main"
 chatreader-tray = "chatreader.main:main"
 
 [dependency-groups]
+build = [
+    "pyinstaller>=6.22.3",
+]
 dev = [
     "pytest",
     "httpx",
