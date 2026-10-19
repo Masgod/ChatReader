@@ -91,6 +91,9 @@ The file uses the defaults below when a key is missing. Keys that are not known 
 | `ignored_users` | `["nightbot", "streamelements", "streamlabs", "moobot"]` | Users whose messages are never read. |
 | `repeat_window` | `5` | A message is skipped if the same user sent the same text within their last N messages. |
 | `debug` | `false` | Write debug-level entries to the log. |
+| `speed` | `1.0` | Speech speed, 0.8 to 1.4. |
+| `cpu_threads` | `2` | CPU threads for speech, 1 to 8. Needs a restart. |
+| `youtube_channel` | `""` | `@handle` or `UC...` channel ID. When set and `youtube_video_id` is empty, the app waits for the channel's live stream and connects by itself. |
 
 `config.example.toml` lists the same keys with comments. The app does not copy it; it writes the defaults.
 

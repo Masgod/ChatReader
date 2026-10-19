@@ -110,18 +110,16 @@ class Player:
                     wav = pending.result()
                 except concurrent.futures.CancelledError:
                     return  # shutdown cancelled the queued synthesis
-                try:
-                    nxt = self._pool.submit(self._synth_safe, sentences[i + 1], lang) if i + 1 < len(sentences) else None
-                except RuntimeError:
-                    return  # shutdown while this sentence was synthesizing
                 with self._cond:
                     # A skip or shutdown during synth must cancel this item before play() starts.
                     if self._shutdown:
                         return
                     if self._skip_gen != gen:
-                        if nxt:
-                            nxt.cancel()
                         break
+                try:
+                    nxt = self._pool.submit(self._synth_safe, sentences[i + 1], lang) if i + 1 < len(sentences) else None
+                except RuntimeError:
+                    return  # shutdown while this sentence was synthesizing
                 if wav is not None:
                     try:
                         self._output.play(wav)

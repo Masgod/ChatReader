@@ -5,6 +5,7 @@ ChatReader reads your **Twitch** and **YouTube** live chat out loud, in Portugue
 - [1. Install](#1-install)
 - [2. First start](#2-first-start)
 - [3. Add it to OBS](#3-add-it-to-obs)
+- [3b. Control it from OBS](#3b-control-it-from-obs)
 - [4. Connect your chats](#4-connect-your-chats)
 - [5. The tray icon](#5-the-tray-icon)
 - [6. Settings explained](#6-settings-explained)
@@ -62,6 +63,17 @@ Good to know:
 - While OBS isn't connected, messages wait in the queue instead of being lost (up to your queue size).
 - If the source is hidden in a scene OBS may unload it. Keep it visible, or right-click the source and untick "Shutdown source when not visible".
 
+## 3b. Control it from OBS
+
+You can keep a small control panel next to your scenes, so you never leave OBS.
+
+1. In OBS, open **Docks** → **Custom Browser Docks**.
+2. Name it `ChatReader` and set the URL to `http://127.0.0.1:8765/dock`. Click **Apply**.
+
+The panel shows green, amber or red status for Twitch, YouTube, the OBS overlay and the voice model, plus how many messages are waiting. It has **Pause / Resume**, **Skip**, **Test voice**, a **Speed** slider and a field for your YouTube link or channel.
+
+On first run the settings page also shows a short **Getting started** checklist (voice model ready, a chat source set, OBS overlay connected). It disappears when all three are done.
+
 ## 4. Connect your chats
 
 Open the settings page (tray icon → **Settings...**, or `http://127.0.0.1:8765/settings`).
@@ -69,6 +81,8 @@ Open the settings page (tray icon → **Settings...**, or `http://127.0.0.1:8765
 **Twitch:** type your channel name under **Twitch channel**, for example `mychannel`. No login is needed; ChatReader reads chat anonymously. You can also paste `twitch.tv/mychannel` and it is cleaned up for you.
 
 **YouTube:** paste the **video ID or the full link** of your live stream under **YouTube video**, for example `https://www.youtube.com/watch?v=abcdefghijk`. The video ID changes on every stream, so update this field each time you go live.
+
+**YouTube without pasting a link every stream:** type your channel handle (for example `@yourchannel`) under **YouTube channel**. ChatReader then waits for your live stream and connects by itself when it starts, and again for the next stream. If a video link or ID is also set, the video link wins. This works by reading YouTube's public live page, so it can stop working if YouTube changes it. The manual link always keeps working.
 
 Press **Save**. The sources connect right away, no restart needed. Leave a field empty to turn that platform off.
 
@@ -96,6 +110,12 @@ The page has a footer with **Save** and **Test voice**. When you change somethin
 ### Voices
 - **Default language**: used when ChatReader isn't sure which language a message is in (very short messages like `gg`, or mixed text).
 - **Portuguese voice** / **English voice**: which voice speaks each language. The ▶ button plays a sample of the *saved* voice, so press **Save** first after changing it. See [Voices](#8-voices).
+
+### Speed and CPU
+- **Speed** (Voices): 0.8 to 1.4. Higher is faster speech.
+- **CPU threads** (System): how many CPU threads speech uses, 1 to 8, default 2. Lower leaves more CPU for your game, higher makes speech start sooner. Needs a restart.
+
+ChatReader also starts speaking a long message after its first sentence is ready, so you hear the beginning sooner.
 
 ### Reading
 - **Announce user name**: says "viewer disse: ..." (Portuguese) or "viewer says: ..." (English) before each message. Turn it off to hear only the text.
@@ -165,7 +185,8 @@ Put a shortcut to that command on your desktop, or just turn on **Start with Win
 | **Message missing** | It was probably filtered ([section 7](#7-what-gets-read-what-gets-skipped)) or dropped because the queue was full. |
 | **Settings won't save** | A red box lists what to fix, for example a Twitch name must be 3–25 letters, digits or `_`. |
 | **Config broke** | A file ChatReader can't read is renamed `config.toml.bad` and defaults load. Delete `config.toml` to start fresh. |
-| **Game stutters** | ChatReader uses 2 CPU threads for speech. Lower it with `THREADS` in `src/chatreader/tts.py`, at the cost of slower speech. |
+| **Game stutters** | Lower **CPU threads** in settings (System), at the cost of slower speech. Restart ChatReader afterwards. |
+| **Dock says "ChatReader not reachable"** | ChatReader is not running, or uses another port. Check the tray icon and that the dock URL has your port. |
 
 ## 11. Before you monetize
 
