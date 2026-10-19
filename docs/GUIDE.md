@@ -55,6 +55,10 @@ ChatReader does not play sound itself. It sends it to OBS through a Browser Sour
 
 The source now appears in the OBS **Audio Mixer**.
 
+**Hear it yourself:** OBS sends source audio to the stream and recording, not to your own speakers, unless you monitor it. In OBS open **Edit → Advanced Audio Properties** (or the gear next to the source in the Audio Mixer), find `Chat voice`, and set **Audio Monitoring** to **Monitor and Output**. Without this you will hear nothing locally even though the audio works.
+
+**The source must be active:** OBS only mixes a Browser Source that is in the scene currently on air. If you switch scenes, put the source in a scene of its own (for example `TTS`) and add that scene as a source inside each scene you use, so the voice works everywhere.
+
 **Test it:** open the settings page and press **Test voice**. You should hear a sample line, and the Chat voice meter in OBS should move.
 
 Good to know:
