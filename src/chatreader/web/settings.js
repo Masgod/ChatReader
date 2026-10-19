@@ -27,6 +27,10 @@
     for (const b of $$("[data-toggle]")) b.setAttribute("aria-checked", !!state[b.dataset.toggle]);
     for (const b of $$("[data-lang]")) b.setAttribute("aria-pressed", state.default_lang === b.dataset.lang);
     for (const box of $$("[data-num]")) $("input", box).value = state[box.dataset.num];
+    for (const g of $$("[data-roles]")) {
+      const list = state[g.dataset.roles] || [];
+      for (const b of $$("[data-role]", g)) b.setAttribute("aria-pressed", b.dataset.role ? list.includes(b.dataset.role) : list.length === 0);
+    }
     $("#port").value = state.port;
 
     $("#chips").replaceChildren(...state.ignored_users.map((name) => {
@@ -107,6 +111,11 @@
 
   for (const b of $$("[data-toggle]")) b.onclick = () => { state[b.dataset.toggle] = !state[b.dataset.toggle]; refresh(); };
   for (const b of $$("[data-lang]")) b.onclick = () => { state.default_lang = b.dataset.lang; refresh(); };
+  for (const g of $$("[data-roles]")) for (const b of $$("[data-role]", g)) b.onclick = () => {
+    const key = g.dataset.roles, role = b.dataset.role, list = state[key];
+    state[key] = !role ? [] : list.includes(role) ? list.filter((r) => r !== role) : [...list, role];
+    refresh();
+  };
   for (const box of $$("[data-num]")) {
     const { num, min, max, step } = box.dataset, [lo, hi, st] = [+min, +max, +step];
     $("input", box).onchange = (e) => setNum(num, e.target.value, lo, hi);

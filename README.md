@@ -97,6 +97,9 @@ The file uses the defaults below when a key is missing. Keys that are not known 
 | `debug` | `false` | Write debug-level entries to the log. |
 | `speed` | `1.0` | Speech speed, 0.8 to 1.4. |
 | `cpu_threads` | `2` | CPU threads for speech, 1 to 8. Needs a restart. |
+| `twitch_roles` / `youtube_roles` | `[]` | Who is read on that platform: empty means everyone, otherwise any of `sub`, `vip`, `mod` (the owner is always read). |
+| `repeat_seconds` | `30` | Skip the same text from anyone within this many seconds; `0` turns it off. |
+| `per_user_voices` | `true` | Give each viewer a stable voice picked from the model's voices. |
 | `youtube_channel` | `""` | `@handle` or `UC...` channel ID. When set and `youtube_video_id` is empty, the app waits for the channel's live stream and connects by itself. |
 
 `config.example.toml` lists the same keys with comments. The app does not copy it; it writes the defaults.
@@ -113,7 +116,7 @@ The file uses the defaults below when a key is missing. Keys that are not known 
 
 Automated:
 
-- `uv run pytest -q -m "not slow"`: 224 passed.
+- `uv run pytest -q -m "not slow"`: 267 passed.
 
 Headless smoke launch with an empty config folder:
 

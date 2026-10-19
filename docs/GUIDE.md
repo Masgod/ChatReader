@@ -77,7 +77,7 @@ You can keep a small control panel next to your scenes, so you never leave OBS.
 The page has three tabs and works from a narrow dock (about 300 px) up to a full browser tab. `/` and `/settings` open the same page.
 
 - **Live**: green, amber or red status for Twitch, YouTube, the OBS overlay and the voice model; **Pause / Resume**, **Skip**, **Copy overlay URL** and **Quit** (click twice to confirm), the same as the tray menu; and the **queue**: the message being read, then those waiting. Click **×** to remove one waiting message, or **Clear all**. The one being read is ended with **Skip**.
-- **Console**: every chat message with what happened to it, plus ChatReader's own log. Outcomes: `queued` (accepted), `played`, `failed` (the voice could not make audio), `dropped` (the queue was full), `skipped` (you pressed Skip), `removed` (you removed it) and `skipped:<reason>` for filtered messages (ignored user, command, link, no text, repeat, spam). Use the **All / Chat / Log** chips, **Pause scrolling**, **Clear view** and the **Debug** switch. The console is kept in memory only (the last 500 lines) and is not saved to disk.
+- **Console**: every chat message with what happened to it, plus ChatReader's own log. Outcomes: `queued` (accepted), `played`, `failed` (the voice could not make audio), `dropped` (the queue was full), `skipped` (you pressed Skip), `removed` (you removed it) and `skipped:<reason>` for filtered messages (ignored user, role, command, link, no text, repeat, duplicate, spam). Use the **All / Chat / Log** chips, **Pause scrolling**, **Clear view** and the **Debug** switch. The console is kept in memory only (the last 500 lines) and is not saved to disk.
 - **Settings**: everything in [section 6](#6-settings-explained).
 
 On first run the Settings tab also shows a short **Getting started** checklist (voice model ready, a chat source set, OBS overlay connected). It is shown whenever one of the three is not done and disappears when all three are done.
@@ -114,6 +114,7 @@ The page has a footer with **Save** and **Test voice**. When you change somethin
 
 ### Sources
 - **Twitch channel**, **YouTube video**: see [section 4](#4-connect-your-chats).
+- **Who is read** (one per platform): Everyone, or only Subscribers (Members on YouTube), VIPs (Twitch only) and/or Mods. The channel owner is always read. If the platform doesn't report a role for a viewer, that viewer counts as having none. Messages that don't match show as `skipped:role` in the Console.
 
 ### Voices
 - **Default language**: used when ChatReader isn't sure which language a message is in (very short messages like `gg`, or mixed text).
@@ -130,6 +131,8 @@ ChatReader also starts speaking a long message after its first sentence is ready
 - **Queue size**: how many messages can wait. When it is full, the oldest waiting one is dropped, so the voice stays close to live chat. Lower = more current, higher = fewer missed messages.
 - **Max characters**: longer messages are cut at a word boundary.
 - **Repeat window**: skips a message if the same person sent the same text within their last N messages. `0` turns it off.
+- **Skip the same text** (seconds): skips a message if anyone sent the same text in the last N seconds (ignoring capitals and extra spaces), so copy-paste floods are read once. Default 30; `0` turns it off.
+- **A different voice for each viewer**: see [Voices](#8-voices).
 
 ### Ignored users
 Bots and people you never want read. Type a name and press **Add**, or click **×** on a chip to remove it. Names are not case sensitive, and a leading `@` is ignored. You can add several at once separated by spaces or commas. Common bots (nightbot, streamelements, streamlabs, moobot) are there by default.
@@ -148,6 +151,8 @@ ChatReader reads **every message** except:
 - messages with **links**
 - messages with **no letters or numbers** (only emotes/symbols)
 - **repeats** from the same person (see Repeat window)
+- **duplicates**: the same text from anyone within the last few seconds (see Skip the same text)
+- viewers whose **role** is not allowed (see Who is read)
 - **spam**: ten or more identical characters in a row (`aaaaaaaaaa`), or one word making up most of a message (`LUL LUL LUL LUL`)
 
 Language is detected for each message, so one chat can mix Portuguese and English and each message gets the right voice.
@@ -162,6 +167,8 @@ ChatReader uses **Kokoro**. You can type any Kokoro voice name in the voice fiel
 | English | `af_heart` (default), `af_bella`, `am_michael`, `bf_emma` |
 
 If you type a name that doesn't exist, you get a warning and that language is not spoken.
+
+**A voice for each viewer:** with the switch on (the default), each viewer gets one voice, chosen once from that language's voices and kept across streams and restarts. The Portuguese and English voice settings stay as the defaults, used for the Test voice button and when no voice list is available. Portuguese has only three voices, so several viewers share them. Turn the switch off to use one voice per language for everyone. There is no screen yet to pick a viewer's voice by hand.
 
 ## 9. Daily use
 

@@ -85,6 +85,15 @@
           <div class="field prefixed"><span>twitch.tv/</span>
             <input type="text" id="twitch_channel" data-key="twitch_channel" placeholder="yourchannel" autocomplete="off" spellcheck="false"></div>
         </label>
+        <div class="row grid">
+          <div><div class="name" id="l-twitch_roles">Who is read</div><div class="hint">Owner is always read</div></div>
+          <div class="roles" id="twitch_roles" role="group" aria-labelledby="l-twitch_roles" data-roles="twitch_roles">
+            <button type="button" class="pill" data-role="">Everyone</button>
+            <button type="button" class="pill" data-role="sub">Subscribers</button>
+            <button type="button" class="pill" data-role="vip">VIPs</button>
+            <button type="button" class="pill" data-role="mod">Mods</button>
+          </div>
+        </div>
         <label class="row grid">
           <div><div class="name">YouTube video</div><div class="hint">Video ID or URL</div></div>
           <div class="field"><input type="text" id="youtube_video_id" data-key="youtube_video_id" placeholder="youtube.com/watch?v=…" autocomplete="off" spellcheck="false"></div>
@@ -93,6 +102,14 @@
           <div><div class="name">YouTube channel</div><div class="hint">@handle · finds your live stream</div></div>
           <div class="field"><input type="text" id="youtube_channel" data-key="youtube_channel" placeholder="@yourchannel" autocomplete="off" spellcheck="false"></div>
         </label>
+        <div class="row grid">
+          <div><div class="name" id="l-youtube_roles">Who is read</div><div class="hint">Owner is always read</div></div>
+          <div class="roles" id="youtube_roles" role="group" aria-labelledby="l-youtube_roles" data-roles="youtube_roles">
+            <button type="button" class="pill" data-role="">Everyone</button>
+            <button type="button" class="pill" data-role="sub">Members</button>
+            <button type="button" class="pill" data-role="mod">Mods</button>
+          </div>
+        </div>
       </div>
     </details>
 
@@ -157,6 +174,18 @@
             <input type="text" id="repeat_window" inputmode="numeric" aria-label="Repeat window">
             <button type="button" data-d="1" aria-label="Increase repeat window">+</button>
           </div>
+        </div>
+        <div class="row">
+          <div class="txt"><div class="name">Skip the same text</div><div class="hint">From anyone, within this many seconds · 0 turns it off</div></div>
+          <div class="field step" data-num="repeat_seconds" data-min="0" data-max="600" data-step="5">
+            <button type="button" data-d="-1" aria-label="Decrease repeat seconds">−</button>
+            <input type="text" id="repeat_seconds" inputmode="numeric" aria-label="Repeat seconds">
+            <button type="button" data-d="1" aria-label="Increase repeat seconds">+</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="txt"><div class="name" id="l-peruser">A different voice for each viewer</div><div class="hint">Picked once per viewer and kept</div></div>
+          <button type="button" class="sw" role="switch" id="per_user_voices" aria-labelledby="l-peruser" data-toggle="per_user_voices"></button>
         </div>
       </div>
     </details>

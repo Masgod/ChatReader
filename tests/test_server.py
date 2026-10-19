@@ -476,3 +476,21 @@ def test_control_actions_run_off_the_event_loop():
     with TestClient(app, base_url="http://127.0.0.1") as client:
         assert client.post("/api/control", json={"action": "skip"}).status_code == 200
     assert seen == ["off-loop"]  # Skip blocks on the overlay socket and must not stall the loop
+
+
+def test_settings_panel_has_chat_rule_controls(env):
+    client, *_ = env
+    _ids(client.get("/").text, ("twitch_roles", "youtube_roles", "repeat_seconds", "per_user_voices"))
+
+
+def test_put_rejects_bad_roles(env):
+    client, _, applied, _ = env
+    r = client.put("/api/config", json={**asdict(Config()), "twitch_roles": ["admin"]})
+    assert r.status_code == 422 and any("twitch_roles" in e for e in r.json()["errors"]) and applied == []
+
+
+def test_put_accepts_new_keys(env):
+    client, _, applied, _ = env
+    body = {**asdict(Config()), "twitch_roles": ["sub", "mod"], "youtube_roles": ["mod"], "repeat_seconds": 60, "per_user_voices": False}
+    assert client.put("/api/config", json=body).status_code == 200
+    assert (applied[0].twitch_roles, applied[0].repeat_seconds, applied[0].per_user_voices) == (["sub", "mod"], 60, False)
