@@ -72,6 +72,20 @@ class KokoroTTS:
     def voices_ok(self) -> dict[str, bool]:
         return dict(self._voices_ok)
 
+    def voices(self) -> dict[str, list[dict]]:
+        """Voices the loaded model offers, grouped by language; empty until the model is loaded."""
+        out: dict[str, list[dict]] = {"pt": [], "en": []}
+        if self._kokoro is None:
+            return out
+        for name in sorted(self._kokoro.get_voices()):
+            if not VOICE_NAME_RE.fullmatch(name) or len(name) < 4 or name[2] != "_":
+                continue
+            lang = {"p": "pt", "a": "en", "b": "en"}.get(name[0])
+            gender = {"f": "female", "m": "male"}.get(name[1])
+            if lang and gender:
+                out[lang].append({"id": name, "label": f"{name[3:].title()} ({gender})"})
+        return out
+
     def reload(self, cfg: Config) -> None:
         if self._kokoro is None:
             model, voices = self._dir / MODEL_FILE, self._dir / VOICES_FILE

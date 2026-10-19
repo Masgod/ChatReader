@@ -3,12 +3,14 @@ import os
 import sys
 import threading
 import webbrowser
+from dataclasses import replace
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from chatreader import startup, tray
 from chatreader.config import Config, load_config, save_config
 from chatreader.controller import Controller
+from chatreader.events import EventLog, LogMirror
 from chatreader.player import Player
 from chatreader.server import Hub, create_app, run_server
 from chatreader.sources.twitch import run_twitch
@@ -21,7 +23,7 @@ def _setup_logging(app: Path, debug: bool) -> None:
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
     root = logging.getLogger()
     root.handlers[:] = [handler]
-    root.setLevel(logging.DEBUG if debug else logging.ERROR)
+    root.setLevel(logging.DEBUG if debug else logging.WARNING)
 
 
 def make_apply(controller, path: Path, set_startup, save=save_config):
@@ -39,9 +41,19 @@ def make_apply(controller, path: Path, set_startup, save=save_config):
                     raise
             controller.apply_config(new)
             save(path, new)
-            logging.getLogger().setLevel(logging.DEBUG if new.debug else logging.ERROR)
+            logging.getLogger().setLevel(logging.DEBUG if new.debug else logging.WARNING)
 
     return apply_config
+
+
+def make_toggle(controller, apply_config=None):
+    """Build the POST /api/toggle callback (only 'debug'): saves through the normal apply path."""
+    apply = apply_config or controller.apply_config
+
+    def toggle(name: str, value: bool) -> None:
+        apply(replace(controller.cfg, **{name: value}))
+
+    return toggle
 
 
 def _install_excepthooks() -> None:
@@ -68,8 +80,11 @@ def main() -> None:
     hub = Hub()
     voices = app / "voices"
     tts = KokoroTTS(voices, cfg, on_warning=lambda m: (log.warning(m), notify(m)))
-    player = Player(tts.synth, hub, cfg.queue_size)
-    controller = Controller(cfg, player, tts, {"twitch": run_twitch, "youtube": run_youtube})
+    events = EventLog()
+    logging.getLogger().addHandler(LogMirror(events))
+    controller = Controller(cfg, None, tts, {"twitch": run_twitch, "youtube": run_youtube}, events)
+    player = Player(tts.synth, hub, cfg.queue_size, on_event=controller.record_item_event)
+    controller._player = player  # the player's callback needs the controller, so wire it after both exist
     apply_config = make_apply(
         controller, cfg_path, lambda on: startup.set_start_with_windows(on, app)
     )
@@ -85,7 +100,8 @@ def main() -> None:
         try:
             app_obj = create_app(
                 lambda: controller.cfg, apply_config, hub, controller.speak_test,
-                controller.snapshot, lambda action: getattr(controller, action)(),
+                controller.snapshot, lambda a: icon.stop() if a == "quit" else getattr(controller, a)(),
+                queue=player, events=events, toggle=make_toggle(controller, apply_config), voices=tts.voices,
             )
             stop_server = run_server(app_obj, cfg.port)  # raises if the port is taken
             if first_run:

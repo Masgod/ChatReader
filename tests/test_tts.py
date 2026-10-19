@@ -130,3 +130,20 @@ def test_real_kokoro_returns_wav():
         pytest.skip("model files not downloaded")
     data = KokoroTTS(voices, Config(), print).synth("Olá, tudo bem?", "pt")
     assert data.startswith(b"RIFF") and len(data) > 5000
+
+
+def test_voices_grouped_and_labelled(tmp_path):
+    (tmp_path / "kokoro-v1.0.int8.onnx").write_bytes(b"x")
+    (tmp_path / "voices-v1.0.bin").write_bytes(b"x")
+    fake = FakeKokoro()
+    fake.get_voices = lambda: ["pm_alex", "pf_dora", "af_heart", "bm_george", "zz_other", "bad name"]
+    tts = KokoroTTS(tmp_path, Config(), lambda m: None, loader=lambda m, v, t: fake)
+    assert tts.voices() == {
+        "pt": [{"id": "pf_dora", "label": "Dora (female)"}, {"id": "pm_alex", "label": "Alex (male)"}],
+        "en": [{"id": "af_heart", "label": "Heart (female)"}, {"id": "bm_george", "label": "George (male)"}],
+    }
+
+
+def test_voices_empty_when_model_missing(tmp_path):
+    tts = KokoroTTS(tmp_path, Config(), lambda m: None, loader=lambda m, v, t: FakeKokoro())
+    assert tts.voices() == {"pt": [], "en": []}

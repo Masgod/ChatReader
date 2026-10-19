@@ -34,3 +34,12 @@ def test_failing_toggle_applies_and_saves_nothing(tmp_path):
     with pytest.raises(OSError):
         apply(replace(ctl.cfg, start_with_windows=True))
     assert ctl.applied == [] and saves == []
+
+
+def test_make_toggle_flips_debug_through_apply():
+    from chatreader.main import make_toggle
+
+    ctl = Ctl()
+    toggle = make_toggle(ctl)
+    toggle("debug", True)
+    assert ctl.applied[-1].debug is True
