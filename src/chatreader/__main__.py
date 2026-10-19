@@ -2,7 +2,7 @@ import sys
 import tomllib
 from pathlib import Path
 
-from chatreader import instance, main
+from chatreader import instance, main, selfcheck
 from chatreader.paths import app_dir, parse_args
 
 DEFAULT_PORT = 8765
@@ -17,8 +17,11 @@ def read_port(app: Path) -> int:
         return DEFAULT_PORT
 
 
-def run(argv, acquire=instance.acquire, open_running=instance.open_running, start=main.main) -> int:
+def run(argv, acquire=instance.acquire, open_running=instance.open_running, start=main.main,
+        check=selfcheck.main_check) -> int:
     args = parse_args(argv)
+    if args.check:  # before the single-instance test so a check works while the app runs
+        return check(app_dir(args.home))
     if not acquire():
         open_running(read_port(app_dir(args.home)))
         return 0
