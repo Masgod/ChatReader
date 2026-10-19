@@ -31,7 +31,7 @@ macOS or Linux, bundling the model, a native window.
 
 ## Data folder
 
-`app_dir()` in a new `paths.py` returns, in order: `CHATREADER_HOME` if set; the
+`app_dir()` in a new `paths.py` returns, in order: the `--home` option; `CHATREADER_HOME` if set; the
 `%APPDATA%\ChatReader` folder when `sys.frozen` is true (created on demand);
 otherwise the current directory. `main.py` uses it instead of the inline
 expression. Existing source installs are unaffected. The built app does not
@@ -48,12 +48,7 @@ A windowless build has no `sys.stdout` or `sys.stderr`. At startup, when they ar
 
 `startup.py` is rewritten around `winreg`:
 
-- Enable: set `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\ChatReader` to
-  the command line: the quoted path of `ChatReader.exe` when frozen, otherwise
-  the quoted `pythonw.exe` with `-m chatreader` (source installs). The working
-  directory is not needed because the data folder no longer depends on it; source
-  installs add `CHATREADER_HOME` is not required either since they run from the repo folder
-  via their own launcher, so the source command is `cmd /c cd /d "<app_dir>" && "<pythonw>" -m chatreader` hidden with `start /b`.
+- Enable: set `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\ChatReader` to the command line: the quoted path of `ChatReader.exe` when frozen, otherwise the quoted `pythonw.exe` followed by `-m chatreader --home "<app_dir>"`. The new `--home <folder>` option (parsed in `__main__.py`, sets the data folder for that run, below `CHATREADER_HOME` in priority) replaces the old shortcut's working directory, which Run keys cannot set. Paths with spaces and apostrophes are quoted.
 - Disable: delete the value. Also delete the old Startup-folder `ChatReader.lnk`
   if present, so users of the earlier version are migrated.
 - The registry module is passed in (`winreg` by default) so tests use a fake.
