@@ -43,10 +43,10 @@
   }
 
   async function loadQueue() {
-    if (App.tab !== "live") return;
+    if (App.tab !== "live") return false;
     const q = await api("/api/queue");
     const key = JSON.stringify(q);
-    if (key === lastQueue) return;  // keep the DOM (and focus) still while nothing changed
+    if (key === lastQueue) return true;  // keep the DOM (and focus) still while nothing changed
     lastQueue = key;
     const rows = [];
     if (q.playing) rows.push(item(q.playing, true));

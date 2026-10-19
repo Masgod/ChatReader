@@ -26,13 +26,17 @@
     },
 
     // Runs fn now and every ms while the page is visible; a throw marks the server unreachable.
+    // fn returns false when it skipped (no request made), which says nothing about reachability.
     poll(fn, ms) {
-      let timer = 0, dead = false;
+      let timer = 0, dead = false, busy = false;
       const run = async () => {
+        if (busy) return;
         clearTimeout(timer);
         if (dead) return;
         if (!document.hidden) {
-          try { await fn(); App.reachable(true); } catch { App.reachable(false); }
+          busy = true;
+          try { if ((await fn()) !== false) App.reachable(true); } catch { App.reachable(false); }
+          busy = false;
         }
         if (!dead) timer = setTimeout(run, ms);
       };

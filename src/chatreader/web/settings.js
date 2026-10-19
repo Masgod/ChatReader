@@ -134,6 +134,9 @@
   $("#btn-save").onclick = async () => {
     const errors = $("#errors"); errors.replaceChildren();
     try {
+      // The Console debug switch saves on its own; do not let this form silently undo it.
+      const live = await api("/api/config");
+      if (state.debug === JSON.parse(saved).debug) state.debug = live.debug;
       await api("/api/config", { method: "PUT", body: state });
       const portWas = savedPort, cfg = await api("/api/config");
       load(cfg);

@@ -35,7 +35,7 @@
   }
 
   async function load() {
-    if (App.tab !== "console") return;
+    if (App.tab !== "console") return false;
     const r = await api("/api/events?since=" + since);
     since = r.last;  // also follows the counter back down if the app restarted
     add(r.events);

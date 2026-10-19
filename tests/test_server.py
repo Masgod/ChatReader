@@ -1,3 +1,4 @@
+import asyncio
 import io
 import threading
 import time
@@ -459,3 +460,19 @@ def test_new_routes_reject_foreign_origin(cc):
     client, *_ = cc
     assert client.post("/api/queue/clear", json={}, headers={"Origin": "http://evil.com"}).status_code == 403
     assert client.post("/api/queue/clear", content="{}", headers={"Content-Type": "text/plain"}).status_code == 403
+
+
+def test_control_actions_run_off_the_event_loop():
+    seen = []
+
+    def control(action):
+        try:
+            asyncio.get_running_loop()
+            seen.append("on-loop")
+        except RuntimeError:
+            seen.append("off-loop")
+
+    app = create_app(lambda: Config(), lambda c: None, Hub(), lambda t: None, lambda: {}, control)
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        assert client.post("/api/control", json={"action": "skip"}).status_code == 200
+    assert seen == ["off-loop"]  # Skip blocks on the overlay socket and must not stall the loop

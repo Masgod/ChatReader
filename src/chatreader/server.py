@@ -197,7 +197,7 @@ def create_app(
         if action == "quit":
             background.add_task(control, action)  # runs after the response is sent
         else:
-            control(action)
+            await asyncio.to_thread(control, action)  # skip waits on the overlay socket; keep the loop free
         return {"ok": True}
 
     @app.get("/api/queue")
