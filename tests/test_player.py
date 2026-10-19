@@ -523,3 +523,14 @@ def test_on_event_exception_is_ignored():
         assert wait_until(lambda: len(out.played) == 2)
     finally:
         player.shutdown()
+
+
+def test_shutdown_during_last_sentence_is_not_reported_played():
+    out = FakeOutput()
+    out.block = True
+    player, out, events = _ev_player(out)
+    player.start()
+    player.submit("hello", "en")
+    assert out.started.wait(WAIT)
+    player.shutdown()
+    assert (1, "played") not in events

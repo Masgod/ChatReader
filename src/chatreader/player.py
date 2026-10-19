@@ -200,6 +200,8 @@ class Player:
                     log.exception("playback failed; skipping sentence")
             pending = nxt
         with self._cond:
+            if self._shutdown:
+                return None
             if self._skip_gen != gen:
                 return "skipped"
         return "played" if any_audio else "failed"
