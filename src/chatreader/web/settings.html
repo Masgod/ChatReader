@@ -1,93 +1,323 @@
 <!doctype html>
+<html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>chatreader settings</title>
 <style>
-  body { font: 15px system-ui, sans-serif; max-width: 34rem; margin: 2rem auto; padding: 0 1rem; }
-  label { display: block; margin: .6rem 0; }
-  input[type=text], input[type=number], select { width: 100%; box-sizing: border-box; padding: .3rem; }
-  #errors { color: #b00020; }
-  #status { color: #2e7d32; }
+  :root {
+    --bg: #17181b; --card: #1e1f23; --field: #141518; --chip: #26272c;
+    --line: #2a2b30; --line2: #33343a; --text: #e7e6e3; --muted: #8a8a8f; --faint: #6b6c70;
+    --acc: #f0b35a; --ok: #6fcf8f; --err: #ef7a7a; --off: #3a3b42;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, "Segoe UI", sans-serif; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+  .bar { position: sticky; z-index: 5; background: #17181bee; backdrop-filter: blur(8px); }
+  header.bar { top: 0; border-bottom: 1px solid var(--line); }
+  footer.bar { bottom: 0; border-top: 1px solid var(--line); }
+  header .wrap { display: flex; align-items: center; gap: 12px; padding-block: 16px; }
+  .logo { width: 28px; height: 28px; border-radius: 7px; background: var(--acc); color: var(--bg);
+          display: grid; place-items: center; font-weight: 600; font-size: 15px; }
+  h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+  #status { margin-left: auto; display: flex; align-items: center; gap: 8px; font: 12px var(--mono); color: #9a9a9e; }
+  #dot { width: 7px; height: 7px; border-radius: 50%; background: #5a5b60; }
+  main { padding-block: 28px 120px; display: flex; flex-direction: column; gap: 36px; }
+  section { display: flex; flex-direction: column; gap: 12px; }
+  h2 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  h2 small { margin-left: 8px; font: 12px var(--mono); color: var(--faint); letter-spacing: 0; text-transform: none; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+  .row { display: flex; align-items: center; gap: 16px; padding: 16px 18px; }
+  .row + .row { border-top: 1px solid var(--line); }
+  .row.grid { display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr); }
+  .row > .txt { flex: 1; min-width: 0; }
+  .name { font-weight: 500; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .hint.warn { color: var(--acc); }
+  .field { background: var(--field); border: 1px solid var(--line2); border-radius: 8px; }
+  .field:focus-within { border-color: var(--acc); }
+  input[type=text] { width: 100%; background: transparent; border: 0; outline: 0; padding: 10px 12px;
+                     font: 13px var(--mono); }
+  input::placeholder { color: var(--faint); }
+  .prefixed { display: flex; align-items: center; }
+  .prefixed span { padding-left: 12px; color: var(--faint); font: 13px var(--mono); }
+  .prefixed input { padding-left: 2px; }
+  .pick { display: flex; gap: 8px; }
+  .btn { background: var(--chip); border: 1px solid var(--line2); border-radius: 8px; padding: 9px 16px; font-weight: 500; }
+  .btn:hover { background: #2f3036; }
+  .btn.icon { flex: none; width: 38px; padding: 0; font-size: 12px; }
+  .seg { display: flex; gap: 4px; padding: 3px; width: max-content; }
+  .seg button { border: 0; border-radius: 6px; padding: 7px 14px; font-weight: 500; background: transparent; color: var(--muted); }
+  .seg button[aria-pressed=true] { background: var(--line2); color: var(--text); }
+  .sw { flex: none; width: 40px; height: 22px; border-radius: 11px; border: 0; padding: 2px; background: var(--off);
+        display: flex; justify-content: flex-start; }
+  .sw[aria-checked=true] { background: var(--acc); justify-content: flex-end; }
+  .sw::after { content: ""; width: 18px; height: 18px; border-radius: 50%; background: #fff; }
+  .step { flex: none; display: flex; align-items: center; }
+  .step button { width: 32px; height: 36px; background: transparent; border: 0; color: #9a9a9e; font-size: 16px; }
+  .step button:hover { color: var(--text); }
+  .step input { width: 52px; text-align: center; padding: 0; }
+  .unit { flex: none; width: 64px; font-size: 12px; color: var(--muted); }
+  #port { width: 96px; text-align: right; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: flex; align-items: center; gap: 6px; background: var(--chip); border: 1px solid var(--line2);
+          border-radius: 999px; padding: 5px 6px 5px 12px; font: 13px var(--mono); }
+  .chip button { width: 20px; height: 20px; border-radius: 50%; border: 0; background: transparent; color: var(--muted); font-size: 14px; line-height: 1; }
+  .chip button:hover { background: #3a3b42; color: var(--text); }
+  .add { display: flex; gap: 8px; }
+  .add .field { flex: 1; min-width: 0; }
+  .add .btn { padding: 0 14px; }
+  .pad { padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+  #errors { margin: 0; padding: 12px 18px 12px 34px; border: 1px solid var(--err); border-radius: 12px; color: var(--err); }
+  #errors:empty { display: none; }
+  footer .wrap { display: flex; align-items: center; gap: 10px; padding-block: 14px; }
+  #msg { font-size: 13px; color: var(--faint); }
+  #msg.dirty { color: var(--acc); } #msg.ok { color: var(--ok); } #msg.bad { color: var(--err); }
+  footer .btns { margin-left: auto; display: flex; gap: 8px; }
+  #save { background: var(--acc); color: var(--bg); border: 0; font-weight: 600; padding: 9px 18px; }
+  #save:disabled { background: var(--line); color: var(--faint); cursor: default; }
+  @media (max-width: 560px) {
+    .wrap { padding: 0 16px; }
+    .row.grid { grid-template-columns: 1fr; gap: 10px; }
+    .row { flex-wrap: wrap; }
+  }
 </style>
-<h1>chatreader</h1>
-<form id="f">
-  <label>Twitch channel <input type="text" name="twitch_channel"></label>
-  <label>YouTube video ID or URL <input type="text" name="youtube_video_id"></label>
-  <label>Portuguese voice <input type="text" name="voice_pt"></label>
-  <label>English voice <input type="text" name="voice_en"></label>
-  <label>Default language
-    <select name="default_lang"><option value="pt">pt</option><option value="en">en</option></select>
-  </label>
-  <label>Queue size <input type="number" name="queue_size" min="1"></label>
-  <label>Max characters <input type="number" name="max_chars" min="1"></label>
-  <label><input type="checkbox" name="announce_user"> Announce user name</label>
-  <label>Port (restart required) <input type="number" name="port" min="1" max="65535"></label>
-  <label><input type="checkbox" name="start_with_windows"> Start with Windows</label>
-  <label>Ignored users (one per line) <textarea name="ignored_users" rows="4" style="width:100%"></textarea></label>
-  <label>Repeat window <input type="number" name="repeat_window" min="0"></label>
-  <label><input type="checkbox" name="debug"> Debug</label>
-  <button type="submit">Save</button>
-  <button type="button" id="test">Test voice</button>
-</form>
-<ul id="errors"></ul>
-<p id="status"></p>
+
+<header class="bar"><div class="wrap">
+  <div class="logo" aria-hidden="true">c</div>
+  <h1>chatreader</h1>
+  <div id="status"><span id="dot"></span><span id="status-text">loading…</span></div>
+</div></header>
+
+<main class="wrap">
+  <ul id="errors" role="alert"></ul>
+
+  <section>
+    <h2>Sources</h2>
+    <div class="card">
+      <label class="row grid">
+        <div><div class="name">Twitch channel</div><div class="hint">Channel name only</div></div>
+        <div class="field prefixed"><span>twitch.tv/</span>
+          <input type="text" data-key="twitch_channel" placeholder="yourchannel" autocomplete="off" spellcheck="false"></div>
+      </label>
+      <label class="row grid">
+        <div><div class="name">YouTube video</div><div class="hint">Video ID or URL</div></div>
+        <div class="field"><input type="text" data-key="youtube_video_id" placeholder="youtube.com/watch?v=…" autocomplete="off" spellcheck="false"></div>
+      </label>
+    </div>
+  </section>
+
+  <section>
+    <h2>Voices</h2>
+    <div class="card">
+      <div class="row grid">
+        <div><div class="name">Default language</div><div class="hint">Used when detection is unsure</div></div>
+        <div class="field seg" role="group" aria-label="Default language">
+          <button type="button" data-lang="pt">Português</button>
+          <button type="button" data-lang="en">English</button>
+        </div>
+      </div>
+      <label class="row grid">
+        <div><div class="name">Portuguese voice</div><div class="hint">New voices download on next start</div></div>
+        <div class="pick">
+          <div class="field" style="flex:1;min-width:0"><input type="text" data-key="voice_pt" list="pt-voices" autocomplete="off" spellcheck="false"></div>
+          <button type="button" class="btn icon" data-preview="pt" title="Preview the saved Portuguese voice" aria-label="Preview Portuguese voice">▶</button>
+        </div>
+      </label>
+      <label class="row grid">
+        <div><div class="name">English voice</div><div class="hint">New voices download on next start</div></div>
+        <div class="pick">
+          <div class="field" style="flex:1;min-width:0"><input type="text" data-key="voice_en" list="en-voices" autocomplete="off" spellcheck="false"></div>
+          <button type="button" class="btn icon" data-preview="en" title="Preview the saved English voice" aria-label="Preview English voice">▶</button>
+        </div>
+      </label>
+      <datalist id="pt-voices"><option value="pt_BR-faber-medium"><option value="pt_BR-edresson-low"></datalist>
+      <datalist id="en-voices"><option value="en_US-lessac-medium"><option value="en_US-amy-medium"><option value="en_US-ryan-high"><option value="en_GB-alan-medium"></datalist>
+    </div>
+  </section>
+
+  <section>
+    <h2>Reading</h2>
+    <div class="card">
+      <div class="row">
+        <div class="txt"><div class="name" id="l-announce">Announce user name</div><div class="hint">Say “viewer says…” before each message</div></div>
+        <button type="button" class="sw" role="switch" aria-labelledby="l-announce" data-toggle="announce_user"></button>
+      </div>
+      <div class="row">
+        <div class="txt"><div class="name">Queue size</div><div class="hint">Older messages drop when full</div></div>
+        <div class="field step" data-num="queue_size" data-min="1" data-max="200" data-step="1">
+          <button type="button" data-d="-1" aria-label="Decrease queue size">−</button>
+          <input type="text" inputmode="numeric" aria-label="Queue size">
+          <button type="button" data-d="1" aria-label="Increase queue size">+</button>
+        </div><div class="unit">messages</div>
+      </div>
+      <div class="row">
+        <div class="txt"><div class="name">Max characters</div><div class="hint">Longer messages are cut off</div></div>
+        <div class="field step" data-num="max_chars" data-min="20" data-max="1000" data-step="10">
+          <button type="button" data-d="-1" aria-label="Decrease max characters">−</button>
+          <input type="text" inputmode="numeric" aria-label="Max characters">
+          <button type="button" data-d="1" aria-label="Increase max characters">+</button>
+        </div><div class="unit">chars</div>
+      </div>
+      <div class="row">
+        <div class="txt"><div class="name">Repeat window</div><div class="hint">Skip identical messages within</div></div>
+        <div class="field step" data-num="repeat_window" data-min="0" data-max="50" data-step="1">
+          <button type="button" data-d="-1" aria-label="Decrease repeat window">−</button>
+          <input type="text" inputmode="numeric" aria-label="Repeat window">
+          <button type="button" data-d="1" aria-label="Increase repeat window">+</button>
+        </div><div class="unit">messages</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ignored users <small id="ignored-count"></small></h2>
+    <div class="card pad">
+      <div class="chips" id="chips"></div>
+      <form class="add" id="add">
+        <div class="field"><input type="text" id="new-user" placeholder="Add a username, e.g. fossabot" autocomplete="off" spellcheck="false" aria-label="Username to ignore"></div>
+        <button type="submit" class="btn">Add</button>
+      </form>
+    </div>
+  </section>
+
+  <section>
+    <h2>System</h2>
+    <div class="card">
+      <label class="row">
+        <div class="txt"><div class="name">Port</div><div class="hint" id="port-hint">Local server · restart required to change</div></div>
+        <div class="field"><input type="text" id="port" data-num-field="port" inputmode="numeric" aria-label="Port"></div>
+      </label>
+      <div class="row">
+        <div class="txt"><div class="name" id="l-startup">Start with Windows</div><div class="hint">Launch minimized on sign-in</div></div>
+        <button type="button" class="sw" role="switch" aria-labelledby="l-startup" data-toggle="start_with_windows"></button>
+      </div>
+      <div class="row">
+        <div class="txt"><div class="name" id="l-debug">Debug</div><div class="hint">Write verbose logs</div></div>
+        <button type="button" class="sw" role="switch" aria-labelledby="l-debug" data-toggle="debug"></button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="bar"><div class="wrap">
+  <div id="msg" role="status"></div>
+  <div class="btns">
+    <button type="button" class="btn" id="test">Test voice</button>
+    <button type="button" class="btn" id="save" disabled>Save</button>
+  </div>
+</div></footer>
+
 <script>
-const form = document.getElementById("f");
-const errorsEl = document.getElementById("errors");
-const statusEl = document.getElementById("status");
-const NUMBERS = ["queue_size", "max_chars", "port", "repeat_window"];
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const SAMPLES = { pt: "Olá, este é um teste de voz.", en: "Hello, this is a voice test." };
+const NUM_KEYS = ["queue_size", "max_chars", "repeat_window", "port"];
+let state = null, saved = "", savedPort = null, flashTimer = 0;
 
-function fill(cfg) {
-  for (const el of form.elements) {
-    if (!el.name) continue;
-    const v = cfg[el.name];
-    if (el.type === "checkbox") el.checked = v;
-    else el.value = Array.isArray(v) ? v.join("\n") : v;
-  }
+const snap = () => JSON.stringify(state);
+const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
+
+function flash(text, cls = "ok") {
+  const m = $("#msg"); m.textContent = text; m.className = cls;
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(refresh, 2200);
 }
 
-function read() {
-  const cfg = {};
-  for (const el of form.elements) {
-    if (!el.name) continue;
-    if (el.type === "checkbox") cfg[el.name] = el.checked;
-    else if (NUMBERS.includes(el.name)) cfg[el.name] = el.value === "" ? null : Number(el.value);
-    else if (el.name === "ignored_users")
-      cfg[el.name] = el.value.split("\n").map((s) => s.trim()).filter(Boolean);
-    else cfg[el.name] = el.value;
-  }
-  return cfg;
+function setNum(key, raw, lo, hi) {
+  const n = parseInt(String(raw).replace(/\D/g, ""), 10);
+  state[key] = isNaN(n) ? state[key] : clamp(n, lo, hi);
+  refresh();
 }
 
-fetch("/api/config").then((r) => r.json()).then(fill);
+function refresh() {
+  for (const el of $$("[data-key]")) if (document.activeElement !== el) el.value = state[el.dataset.key] ?? "";
+  for (const b of $$("[data-toggle]")) b.setAttribute("aria-checked", !!state[b.dataset.toggle]);
+  for (const b of $$("[data-lang]")) b.setAttribute("aria-pressed", state.default_lang === b.dataset.lang);
+  for (const box of $$("[data-num]")) $("input", box).value = state[box.dataset.num];
+  $("#port").value = state.port;
 
-form.onsubmit = async (e) => {
+  const chips = $("#chips");
+  chips.replaceChildren(...state.ignored_users.map((name) => {
+    const c = document.createElement("div"); c.className = "chip"; c.append(name);
+    const x = document.createElement("button");
+    x.type = "button"; x.textContent = "×"; x.title = "Remove"; x.setAttribute("aria-label", "Remove " + name);
+    x.onclick = () => { state.ignored_users = state.ignored_users.filter((u) => u !== name); refresh(); };
+    c.append(x); return c;
+  }));
+  $("#ignored-count").textContent = state.ignored_users.length;
+
+  const source = state.twitch_channel ? "twitch.tv/" + state.twitch_channel : state.youtube_video_id ? "YouTube" : "";
+  $("#dot").style.background = source ? "var(--ok)" : "#5a5b60";
+  $("#status-text").textContent = source ? "listening · " + source : "idle · :" + savedPort;
+
+  const portChanged = state.port !== savedPort;
+  const ph = $("#port-hint");
+  ph.textContent = portChanged ? "Restart required to apply" : "Local server · restart required to change";
+  ph.className = "hint" + (portChanged ? " warn" : "");
+
+  const dirty = snap() !== saved;
+  $("#save").disabled = !dirty;
+  const m = $("#msg"); m.textContent = dirty ? "Unsaved changes" : "All changes saved"; m.className = dirty ? "dirty" : "";
+}
+
+function load(cfg) {
+  state = cfg; saved = snap(); savedPort = cfg.port;
+  refresh();
+}
+
+for (const el of $$("[data-key]")) el.addEventListener("input", () => {
+  state[el.dataset.key] = el.dataset.key === "twitch_channel"
+    ? el.value.replace(/^.*twitch\.tv\//i, "").trim() : el.value;
+  refresh();
+});
+for (const b of $$("[data-toggle]")) b.onclick = () => { state[b.dataset.toggle] = !state[b.dataset.toggle]; refresh(); };
+for (const b of $$("[data-lang]")) b.onclick = () => { state.default_lang = b.dataset.lang; refresh(); };
+for (const box of $$("[data-num]")) {
+  const { num, min, max, step } = box.dataset, [lo, hi, st] = [+min, +max, +step];
+  $("input", box).onchange = (e) => setNum(num, e.target.value, lo, hi);
+  for (const b of $$("button", box)) b.onclick = () => { state[num] = clamp(state[num] + st * +b.dataset.d, lo, hi); refresh(); };
+}
+$("#port").onchange = (e) => setNum("port", e.target.value, 1, 65535);
+
+$("#add").onsubmit = (e) => {
   e.preventDefault();
-  errorsEl.replaceChildren();
-  statusEl.textContent = "";
-  const r = await fetch("/api/config", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(read()),
-  });
-  if (r.ok) {
-    statusEl.textContent = "Saved.";
-    fetch("/api/config").then((x) => x.json()).then(fill);
-    return;
-  }
-  const body = await r.json().catch(() => ({}));
-  for (const msg of body.errors || ["Save failed"]) {
-    const li = document.createElement("li");
-    li.textContent = msg;
-    errorsEl.append(li);
-  }
+  const input = $("#new-user");
+  const names = input.value.split(/[\s,]+/).map((x) => x.toLowerCase().replace(/^@/, "")).filter((x) => x && !state.ignored_users.includes(x));
+  if (names.length) state.ignored_users = [...state.ignored_users, ...new Set(names)];
+  input.value = ""; refresh();
 };
 
-document.getElementById("test").onclick = () =>
-  fetch("/api/test", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: SAMPLES[form.elements.default_lang.value] }),
-  });
+async function speak(lang) {
+  try {
+    const r = await fetch("/api/test", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: SAMPLES[lang] }) });
+    flash(r.ok ? "Playing the saved " + (lang === "pt" ? "Portuguese" : "English") + " voice…" : "Test failed", r.ok ? "ok" : "bad");
+  } catch { flash("Test failed", "bad"); }
+}
+$("#test").onclick = () => speak(state.default_lang);
+for (const b of $$("[data-preview]")) b.onclick = () => speak(b.dataset.preview);
+
+$("#save").onclick = async () => {
+  const errors = $("#errors"); errors.replaceChildren();
+  try {
+    const r = await fetch("/api/config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(state) });
+    if (r.ok) {
+      const portWas = savedPort, cfg = await (await fetch("/api/config")).json();
+      load(cfg);
+      flash(cfg.port !== portWas ? "Saved · restart to apply new port" : "Saved");
+      return;
+    }
+    const body = await r.json().catch(() => ({}));
+    for (const msg of body.errors || ["Save failed"]) { const li = document.createElement("li"); li.textContent = msg; errors.append(li); }
+    flash("Not saved", "bad");
+  } catch { flash("Not saved · server unreachable", "bad"); }
+};
+
+fetch("/api/config").then((r) => r.json()).then(load)
+  .catch(() => { $("#status-text").textContent = "server unreachable"; });
 </script>
+</html>
