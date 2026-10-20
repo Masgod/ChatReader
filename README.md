@@ -2,6 +2,8 @@
 
 A Windows tray app that reads Twitch and YouTube live chat aloud, in Portuguese (BR) and English. Speech is generated locally on the CPU with [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) (via `kokoro-onnx`). Audio reaches the stream through an OBS Browser Source.
 
+![ChatReader settings page](docs/screenshot.png)
+
 New here? Read the [user guide](docs/GUIDE.md).
 
 Status: early version (0.1.0). The automated tests pass and live Twitch chat has been tested by the author; YouTube live chat and the other manual checks under "Still to verify" are not done yet.
