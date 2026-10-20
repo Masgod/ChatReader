@@ -133,16 +133,21 @@ def test_chat_spoken_text_is_unchanged():
 # --- Filters -------------------------------------------------------------
 
 def run(msg, **cfg):
-    c = Config(**cfg)
+    c = Config(**{"read_events": True, **cfg})
     s = FilterState(size=c.repeat_window)
     return explain(msg, c, s), apply(msg, c, s)
 
 
 def test_event_ignores_role_filter_command_and_repeats():
-    c, s = Config(twitch_roles=["mod"]), FilterState(size=5)
+    c, s = Config(twitch_roles=["mod"], read_events=True), FilterState(size=5)
     m = ev("bits", "50", "oi")
     assert apply(m, c, s) is not None
     assert apply(m, c, s) is not None  # same text again is fine for a donation
+
+
+def test_events_are_off_until_switched_on():
+    assert Config().read_events is False
+    assert explain(ev("bits", "100"), Config(), FilterState(size=5)) == "event off"
 
 
 def test_event_kind_can_be_switched_off():

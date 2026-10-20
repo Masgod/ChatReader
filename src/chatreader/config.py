@@ -39,6 +39,7 @@ class Config:
     youtube_roles: list[str] = field(default_factory=list)
     repeat_seconds: int = 30  # skip the same text from anyone within this many seconds; 0 = off
     per_user_voices: bool = True
+    read_events: bool = False  # master switch: events are only read when this is on
     event_kinds: list[str] = field(default_factory=lambda: list(EVENT_CHOICES))  # which events are read aloud
     min_bits: int = 0  # ignore cheers smaller than this
 

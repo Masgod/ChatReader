@@ -47,7 +47,7 @@ def explain(msg: Msg, cfg: Config, state: FilterState) -> str | None:
     if msg.user.lower() in {name.lower() for name in cfg.ignored_users}:
         return "ignored user"
     if msg.kind != "chat":  # donations skip the chat rules: whoever paid is read
-        if msg.kind not in cfg.event_kinds:
+        if not cfg.read_events or msg.kind not in cfg.event_kinds:
             return "event off"
         if msg.kind == "bits" and msg.detail.isdigit() and int(msg.detail) < cfg.min_bits:
             return "min bits"
