@@ -9,8 +9,17 @@ REFRESH_SECONDS = 3
 
 
 def _image() -> Image.Image:
-    img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
-    ImageDraw.Draw(img).ellipse((4, 4, 60, 60), fill=(145, 70, 255, 255))
+    """Voice bubble: white chat bubble with sound bars on a purple tile (drawn at 4x, 64-unit grid)."""
+    k = 4
+    img = Image.new("RGBA", (64 * k, 64 * k), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    purple, white = (145, 70, 255, 255), (255, 255, 255, 255)
+    box = lambda *c: tuple(v * k for v in c)  # noqa: E731
+    d.rounded_rectangle(box(0, 0, 63.9, 63.9), 14 * k, fill=purple)
+    d.rounded_rectangle(box(10, 12, 54, 44), 8 * k, fill=white)
+    d.polygon([(20 * k, 43 * k), (34 * k, 43 * k), (20 * k, 55 * k)], fill=white)
+    for x, top, bottom in ((22, 23, 33), (29.5, 18, 38), (37, 21, 35)):
+        d.rounded_rectangle(box(x, top, x + 5, bottom), 2.5 * k, fill=purple)
     return img
 
 
