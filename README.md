@@ -4,7 +4,7 @@ A Windows tray app that reads Twitch and YouTube live chat aloud, in Portuguese 
 
 New here? Read the [user guide](docs/GUIDE.md).
 
-Status: early version (0.1.0). The automated tests pass; the manual checks listed under "Still to verify" are not done yet.
+Status: early version (0.1.0). The automated tests pass and live Twitch chat has been tested by the author; YouTube live chat and the other manual checks under "Still to verify" are not done yet.
 
 ## Voice licences
 
@@ -120,7 +120,7 @@ The file uses the defaults below when a key is missing. Keys that are not known 
 
 Automated:
 
-- `uv run pytest -q -m "not slow"`: 295 passed.
+- `uv run pytest -q -m "not slow"`: 300 passed.
 
 Headless smoke launch with an empty config folder:
 
@@ -130,11 +130,12 @@ Headless smoke launch with an empty config folder:
 
 ## Still to verify by you
 
-The following checks need live chat, OBS and a running game. They have not been run.
+The unchecked items need live chat, OBS and a running game. They have not been run.
 
 - [ ] The tray icon appears with no console window (`pythonw -m chatreader`).
 - [ ] The settings page Test button is audible in OBS, and the source has its own volume slider.
-- [ ] Live Twitch chat, then live YouTube chat, for a few minutes each.
+- [x] Live Twitch chat (tested by the author on their own stream).
+- [ ] Live YouTube chat, for a few minutes.
 - [ ] Pause, Skip and Quit work from the tray.
 - [ ] CPU use while a game runs: ______ %
 
@@ -145,3 +146,7 @@ The following checks need live chat, OBS and a running game. They have not been 
 - CPU use while a game runs has not been measured.
 - Runs of 10 or more identical characters (for example "kkkkkkkkkk") are dropped as spam.
 - Only one overlay connection is supported. A second connection takes over the audio.
+
+## License
+
+MIT, see [LICENSE](LICENSE). Third-party components and their licences (including GPL-3.0 parts bundled in the built zip) are listed in `THIRD_PARTY_NOTICES.txt`.
