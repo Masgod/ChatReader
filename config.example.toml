@@ -6,11 +6,11 @@ twitch_channel = ""
 # YouTube live video ID or URL. Empty disables YouTube.
 youtube_video_id = ""
 
-# Piper voice for Portuguese messages (downloaded into voices/).
-voice_pt = "pt_BR-faber-medium"
+# Kokoro voice for Portuguese messages (downloaded on first run).
+voice_pt = "pf_dora"
 
-# Piper voice for English messages (downloaded into voices/).
-voice_en = "en_US-lessac-medium"
+# Kokoro voice for English messages.
+voice_en = "af_heart"
 
 # Language used when detection is unsure or the message is very short: "pt" or "en".
 default_lang = "pt"
@@ -33,7 +33,7 @@ start_with_windows = false
 # Chat users whose messages are never read (bots).
 ignored_users = ["nightbot", "streamelements", "streamlabs", "moobot"]
 
-# Seconds during which the same user's repeated message is skipped.
+# Seconds during which the same user's repeated message is skipped (rapid-fire repeats).
 repeat_window = 5
 
 # Write debug-level entries to the log file (errors only otherwise).
@@ -47,3 +47,13 @@ cpu_threads = 2
 
 # YouTube channel (@handle or UC... ID) to find the live stream automatically.
 youtube_channel = ""
+
+# Only read messages from these roles ("sub", "vip", "mod"). Empty = read everyone.
+twitch_roles = []
+youtube_roles = []
+
+# Skip the same text from anyone within this many seconds (0 = off, max 600).
+repeat_seconds = 30
+
+# Give each chat user their own voice.
+per_user_voices = true
