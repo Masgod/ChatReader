@@ -87,6 +87,7 @@ _STATIC = {
     "live.js": "text/javascript",
     "console.js": "text/javascript",
     "settings.js": "text/javascript",
+    "icon.svg": "image/svg+xml",
 }
 _LOCAL_HOSTS = {"127.0.0.1", "localhost", "[::1]"}
 

@@ -494,3 +494,15 @@ def test_put_accepts_new_keys(env):
     body = {**asdict(Config()), "twitch_roles": ["sub", "mod"], "youtube_roles": ["mod"], "repeat_seconds": 60, "per_user_voices": False}
     assert client.put("/api/config", json=body).status_code == 200
     assert (applied[0].twitch_roles, applied[0].repeat_seconds, applied[0].per_user_voices) == (["sub", "mod"], 60, False)
+
+
+def test_page_icon_is_served_and_linked():
+    from fastapi.testclient import TestClient
+
+    from chatreader.config import Config
+    from chatreader.server import Hub, create_app
+
+    c = TestClient(create_app(lambda: Config(), lambda cfg: None, Hub(), lambda t: None, lambda: {"ok": True}, lambda a: None), base_url="http://127.0.0.1")
+    r = c.get("/static/icon.svg")
+    assert r.status_code == 200 and r.headers["content-type"].startswith("image/svg+xml") and b"<svg" in r.content
+    assert 'rel="icon" href="/static/icon.svg"' in c.get("/").text
