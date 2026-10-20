@@ -1,4 +1,48 @@
+from pathlib import Path
+
+import pytest
+
 from chatreader import startup
+
+RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
+
+
+class FakeReg:
+    HKEY_CURRENT_USER = "HKCU"
+    KEY_SET_VALUE = 2
+    REG_SZ = 1
+
+    def __init__(self, fail=None):
+        self.values, self.fail = {}, fail
+
+    def CreateKey(self, root, path):
+        assert (root, path) == ("HKCU", RUN_KEY)
+        if self.fail:
+            raise self.fail
+        return self
+
+    OpenKey = lambda self, root, path, res, access: self.CreateKey(root, path)  # noqa: E731
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def SetValueEx(self, key, name, res, kind, value):
+        self.values[name] = (kind, value)
+
+    def DeleteValue(self, key, name):
+        if name not in self.values:
+            raise FileNotFoundError(name)
+        del self.values[name]
+
+
+@pytest.fixture
+def lnk(tmp_path, monkeypatch):
+    p = tmp_path / "ChatReader.lnk"
+    monkeypatch.setattr(startup, "shortcut_path", lambda: p)
+    return p
 
 
 def test_shortcut_path_in_startup_folder(monkeypatch):
@@ -6,37 +50,43 @@ def test_shortcut_path_in_startup_folder(monkeypatch):
     assert str(startup.shortcut_path()).replace("\\", "/").endswith("Startup/ChatReader.lnk")
 
 
-def test_enable_runs_powershell_once(tmp_path, monkeypatch):
-    monkeypatch.setattr(startup, "shortcut_path", lambda: tmp_path / "ChatReader.lnk")
-    calls = []
-    startup.set_start_with_windows(True, tmp_path / "app", run=lambda *a, **k: calls.append(a))
-    assert len(calls) == 1
-    cmd = " ".join(map(str, calls[0][0]))
-    assert "pythonw" in cmd and "-m chatreader" in cmd and str(tmp_path / "app") in cmd
+def test_enable_writes_run_value_frozen(tmp_path, lnk):
+    reg = FakeReg()
+    startup.set_start_with_windows(True, tmp_path, reg=reg, frozen=True, executable=r"C:\Apps\Chat Reader\ChatReader.exe")
+    assert reg.values["ChatReader"] == (1, r'"C:\Apps\Chat Reader\ChatReader.exe"')
 
 
-def test_disable_removes_file_without_run(tmp_path, monkeypatch):
-    lnk = tmp_path / "ChatReader.lnk"
+def test_enable_source_command(tmp_path, lnk):
+    reg = FakeReg()
+    startup.set_start_with_windows(True, tmp_path / "app dir", reg=reg, frozen=False, executable=r"C:\py\pythonw.exe")
+    assert reg.values["ChatReader"][1] == f'"C:\py\pythonw.exe" -m chatreader --home "{tmp_path / "app dir"}"'
+
+
+def test_command_quotes_spaces_apostrophes_and_unicode():
+    app = Path("C:/Users/Ana María's PC/Chat Reader")
+    cmd = startup.startup_command(app, False, "C:/Py 3/pythonw.exe")
+    assert cmd == f'"C:/Py 3/pythonw.exe" -m chatreader --home "{app}"'
+    assert cmd.count('"') == 4
+
+
+def test_disable_deletes_value_and_old_shortcut(tmp_path, lnk):
     lnk.write_text("x")
-    monkeypatch.setattr(startup, "shortcut_path", lambda: lnk)
-    startup.set_start_with_windows(False, tmp_path, run=lambda *a, **k: 1 / 0)
+    reg = FakeReg()
+    reg.values["ChatReader"] = (1, "x")
+    startup.set_start_with_windows(False, tmp_path, reg=reg)
+    assert "ChatReader" not in reg.values and not lnk.exists()
+
+
+def test_disable_missing_value_is_not_an_error(tmp_path, lnk):
+    startup.set_start_with_windows(False, tmp_path, reg=FakeReg())
+
+
+def test_enable_removes_old_shortcut(tmp_path, lnk):
+    lnk.write_text("x")
+    startup.set_start_with_windows(True, tmp_path, reg=FakeReg(), frozen=True, executable="C:/a.exe")
     assert not lnk.exists()
 
 
-def test_quotes_in_app_dir_are_doubled(tmp_path, monkeypatch):
-    monkeypatch.setattr(startup, "shortcut_path", lambda: tmp_path / "ChatReader.lnk")
-    calls = []
-    app = "C:/O'Brien ‘s ’ dir"
-    startup.set_start_with_windows(True, app, run=lambda *a, **k: calls.append((a, k)))
-    ((args, kw),) = calls
-    assert "O''Brien ‘‘s ’’ dir" in args[0][-1]
-    assert kw["check"] is True
-
-
-def test_pythonw_falls_back_to_python(tmp_path, monkeypatch):
-    exe = tmp_path / "python.exe"
-    exe.write_text("")
-    monkeypatch.setattr(startup.sys, "executable", str(exe))
-    assert startup._pythonw() == exe
-    (tmp_path / "pythonw.exe").write_text("")
-    assert startup._pythonw() == tmp_path / "pythonw.exe"
+def test_registry_error_propagates(tmp_path, lnk):
+    with pytest.raises(PermissionError):
+        startup.set_start_with_windows(True, tmp_path, reg=FakeReg(fail=PermissionError("policy")), frozen=True, executable="C:/a.exe")

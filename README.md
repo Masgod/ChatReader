@@ -8,7 +8,7 @@ Status: early version (0.1.0). The automated tests pass; the manual checks liste
 
 ## Voice licences
 
-The engine is Kokoro-82M. Its code (`kokoro-onnx`, MIT) and weights (Apache-2.0) are permissively licensed, and the model card says it was trained on permissive or non-copyrighted audio.
+The engine is Kokoro-82M. Its code (`kokoro-onnx`, MIT) and weights (Apache-2.0) are permissively licensed, and the model card says it was trained on permissive or non-copyrighted audio. The phonemizer that Kokoro needs (`phonemizer`, espeak-ng) is GPL-3.0: installing from source is fine, but redistributing a built zip that contains it carries GPL obligations (see `THIRD_PARTY_NOTICES.txt`).
 
 - Not verified: where the training data of the individual Portuguese voices (`pf_dora`, `pm_alex`, `pm_santa`) comes from. The VOICES.md file does not document it. Ask the author (hexgrad) or get written legal advice before relying on it for a monetized stream.
 - Phonemes come from espeak-ng (GPL-3.0+) through `kokoro-onnx`. This matters if you redistribute the app, not for the generated audio. This is not legal advice.
@@ -57,6 +57,10 @@ The app lives in the system tray (purple circle icon). Set `CHATREADER_HOME` to 
 3. Tick **Control audio via OBS**. The source then appears in the OBS mixer with its own volume and mute controls.
 
 Open the overlay in one place only. Only one overlay connection is supported.
+
+## Packaged app
+
+`uv run --group build python packaging/build.py` builds `dist/ChatReader/ChatReader.exe` (a windowless tray app, no Python needed), a zip and its SHA-256 file; `ChatReader.exe --check` self-tests the build (exit code 0 = ok; the result is saved as `check-result.json` in the data folder). Data lives in `%APPDATA%\ChatReader` (override with `--home <folder>` or `CHATREADER_HOME`). Start with Windows uses the per-user registry Run key. The build is unsigned, so Windows or antivirus may warn; see `packaging/README.md`. The zip bundles GPL-3.0 components (phonemizer, espeak-ng): `THIRD_PARTY_NOTICES.txt` and the `licenses` folder in the zip list everything and what redistribution requires.
 
 ## OBS dock and status API
 
@@ -116,7 +120,7 @@ The file uses the defaults below when a key is missing. Keys that are not known 
 
 Automated:
 
-- `uv run pytest -q -m "not slow"`: 267 passed.
+- `uv run pytest -q -m "not slow"`: 295 passed.
 
 Headless smoke launch with an empty config folder:
 
