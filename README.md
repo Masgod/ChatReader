@@ -1,154 +1,38 @@
 # ChatReader
 
-A Windows tray app that reads Twitch and YouTube live chat aloud, in Portuguese (BR) and English. Speech is generated locally on the CPU with [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) (via `kokoro-onnx`). Audio reaches the stream through an OBS Browser Source.
+Reads your **Twitch** and **YouTube** live chat out loud, in Portuguese (BR) and English. A small Windows tray app: the voice is generated on your own PC with [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) (no cloud, no account) and reaches your stream through an OBS Browser Source.
 
 ![ChatReader settings page](docs/screenshot.png)
 
-New here? Read the [user guide](docs/GUIDE.md).
+## Features
 
-Status: early version (0.1.0). The automated tests pass and live Twitch chat has been tested by the author; YouTube live chat and the other manual checks under "Still to verify" are not done yet.
+- Twitch (anonymous, no login) and YouTube live chat
+- Picks Portuguese or English per message; optional different voice per viewer
+- Filters bots, `!commands`, links, repeats and spam; read only subs, VIPs or mods if you want
+- Control from the tray icon or an OBS dock: pause, skip, edit the queue
+- Local only: the server listens on `127.0.0.1`
 
-## Voice licences
+## Get started
 
-The engine is Kokoro-82M. Its code (`kokoro-onnx`, MIT) and weights (Apache-2.0) are permissively licensed, and the model card says it was trained on permissive or non-copyrighted audio. The phonemizer that Kokoro needs (`phonemizer`, espeak-ng) is GPL-3.0: installing from source is fine, but redistributing a built zip that contains it carries GPL obligations (see `THIRD_PARTY_NOTICES.txt`).
+1. Download `ChatReader-<version>-win64.zip` from [Releases](https://github.com/Masgod/TTS-test/releases), unzip it and run `ChatReader.exe`. The voice model (about 120 MB) downloads on first run.
+2. In the settings page that opens, type your Twitch channel (or YouTube video link) and press **Save**.
+3. In OBS add a **Browser** source with URL `http://127.0.0.1:8765/overlay` and tick **Control audio via OBS**.
 
-- Not verified: where the training data of the individual Portuguese voices (`pf_dora`, `pm_alex`, `pm_santa`) comes from. The VOICES.md file does not document it. Ask the author (hexgrad) or get written legal advice before relying on it for a monetized stream.
-- Phonemes come from espeak-ng (GPL-3.0+) through `kokoro-onnx`. This matters if you redistribute the app, not for the generated audio. This is not legal advice.
-- An earlier version used Piper voices. Those were dropped because `en_US-lessac-medium` is under a research-only licence and the Portuguese Piper voices are finetuned from it.
+The build is not signed, so Windows may warn; the [guide](docs/GUIDE.md#1-install) explains how to verify the zip. Prefer Python? Run from source with `uv sync` then `uv run python -m chatreader`.
 
-Voices can be swapped in the settings page (`voice_pt`, `voice_en`). Model files are downloaded at runtime and are never committed (`voices/` is git-ignored).
+## Documentation
 
-## Requirements
+| | |
+|---|---|
+| [User guide](docs/GUIDE.md) | Install, OBS setup, settings, troubleshooting |
+| [Configuration and API](docs/CONFIGURATION.md) | Every `config.toml` key, tray menu, OBS dock, local API |
+| [Development](docs/DEVELOPMENT.md) | Run from source, build the app, how it works, known limits |
+| [Licences](docs/LICENSES.md) | Voice model, GPL components, what to check before monetizing |
 
-- Windows 10 or 11
-- Python 3.11 or newer, and [uv](https://docs.astral.sh/uv/)
-- Internet access for chat and for the first-run model download
+## Status
 
-## Install
-
-```
-uv sync
-```
-
-## Run
-
-```
-uv run python -m chatreader
-```
-
-This keeps a console window open. For daily use without a console window:
-
-```
-pythonw -m chatreader
-```
-
-`uv run chatreader-tray` starts the same app through its GUI entry point.
-
-On first run the app:
-
-- downloads the Kokoro model (about 120 MB: `kokoro-v1.0.int8.onnx` and `voices-v1.0.bin`) into `voices/`,
-- creates `config.toml` with the default values,
-- opens the settings page in your browser.
-
-The app lives in the system tray (purple circle icon). Set `CHATREADER_HOME` to choose the folder for `config.toml`, `voices/` and `chatreader.log`. The default is the current working directory. The log rotates at 1 MB, keeps 3 backups, and records errors only unless `debug` is on.
-
-## OBS setup
-
-1. Start ChatReader.
-2. In OBS, add a **Browser** source with the URL `http://127.0.0.1:8765/overlay`. Use the port from your config if you changed it.
-3. Tick **Control audio via OBS**. The source then appears in the OBS mixer with its own volume and mute controls.
-
-Open the overlay in one place only. Only one overlay connection is supported.
-
-## Packaged app
-
-`uv run --group build python packaging/build.py` builds `dist/ChatReader/ChatReader.exe` (a windowless tray app, no Python needed), a zip and its SHA-256 file; `ChatReader.exe --check` self-tests the build (exit code 0 = ok; the result is saved as `check-result.json` in the data folder). Data lives in `%APPDATA%\ChatReader` (override with `--home <folder>` or `CHATREADER_HOME`). Start with Windows uses the per-user registry Run key. The build is unsigned, so Windows or antivirus may warn; see `packaging/README.md`. The zip bundles GPL-3.0 components (phonemizer, espeak-ng): `THIRD_PARTY_NOTICES.txt` and the `licenses` folder in the zip list everything and what redistribution requires.
-
-## OBS dock and status API
-
-The control center is one page with three tabs: **Live** (status, queue with remove and clear, Pause/Resume, Skip, Copy overlay URL, Quit), **Console** (chat activity with the outcome of each message, plus the app log and a debug toggle) and **Settings**. Add `http://127.0.0.1:8765/dock` in OBS under Docks, Custom Browser Docks (it opens on Live); `/` and `/settings` open the same page. It works from about 300 px wide up. API: `GET /api/status`, `POST /api/control` (`pause`, `resume`, `skip`, `quit`), `GET /api/queue`, `POST /api/queue/remove` (`{"id": n}`), `POST /api/queue/clear`, `GET /api/events?since=N`, `POST /api/toggle` (`{"name": "debug", "value": bool}`), `GET /api/voices`. All are protected like the rest of the local server. Chat text shown in the console is kept in memory only (last 500 events) and is never written to disk by this feature. Long messages start speaking after their first sentence is synthesized (sentence prefetch).
-
-## Settings page and tray menu
-
-The Settings tab is at `http://127.0.0.1:8765/settings`. It opens on first run and from the tray menu ("Settings..."). It edits every key in the table below. Saving writes `config.toml` and applies the change immediately. Filters and voices apply at once. Changing the Twitch channel or YouTube video ID reconnects that source. Invalid values are rejected with a message, and the previous config stays active. The voice fields are dropdowns built from the model's real voice list (a text box if the model is not loaded). The **Test voice** button speaks a sample line with the saved voice.
-
-The tray menu has:
-
-- **Pause / Resume**: pauses the worker. Messages keep queuing up to the cap.
-- **Skip current**: stops the clip now playing and moves on.
-- **Settings...**: opens the settings page.
-- **Copy overlay URL**: copies the overlay URL to the clipboard.
-- **Quit**: stops the sources, the player and the server.
-
-The tray tooltip shows the status of each source and of the overlay.
-
-## config.toml
-
-The file uses the defaults below when a key is missing. Keys that are not known are ignored. A file that cannot be parsed is renamed to `config.toml.bad`, and the defaults are loaded.
-
-| Key | Default | Meaning |
-|---|---|---|
-| `twitch_channel` | `""` | Twitch channel name without `#`. Empty disables Twitch. |
-| `youtube_video_id` | `""` | YouTube live video ID or URL (a URL is reduced to the ID). Empty disables YouTube. |
-| `voice_pt` | `"pf_dora"` | Kokoro voice for Portuguese messages (`pf_dora`, `pm_alex`, `pm_santa`). |
-| `voice_en` | `"af_heart"` | Kokoro voice for English messages (for example `af_heart`, `af_bella`, `am_michael`). |
-| `default_lang` | `"pt"` | Language used when detection is unsure or the text is under 12 characters. `"pt"` or `"en"`. |
-| `queue_size` | `20` | Messages waiting to be spoken. When full, the oldest waiting message is dropped. |
-| `max_chars` | `200` | Longer messages are cut at a word boundary. |
-| `announce_user` | `true` | Say "<user> disse:" or "<user> says:" before the text. |
-| `port` | `8765` | Port of the local server (bound to `127.0.0.1` only). |
-| `start_with_windows` | `false` | Adds or removes a `ChatReader.lnk` shortcut in the Startup folder. |
-| `ignored_users` | `["nightbot", "streamelements", "streamlabs", "moobot"]` | Users whose messages are never read. |
-| `repeat_window` | `5` | A message is skipped if the same user sent the same text within their last N messages. |
-| `debug` | `false` | Write debug-level entries to the log. |
-| `speed` | `1.0` | Speech speed, 0.8 to 1.4. |
-| `cpu_threads` | `2` | CPU threads for speech, 1 to 8. Needs a restart. |
-| `twitch_roles` / `youtube_roles` | `[]` | Who is read on that platform: empty means everyone, otherwise any of `sub`, `vip`, `mod` (the owner is always read). |
-| `repeat_seconds` | `30` | Skip the same text from anyone within this many seconds; `0` turns it off. |
-| `per_user_voices` | `true` | Give each viewer a stable voice picked from the model's voices. |
-| `youtube_channel` | `""` | `@handle` or `UC...` channel ID. When set and `youtube_video_id` is empty, the app waits for the channel's live stream and connects by itself. |
-
-`config.example.toml` lists the same keys with comments. The app does not copy it; it writes the defaults.
-
-## How it works
-
-1. The Twitch source (anonymous IRC over WebSocket) and the YouTube source (`pytchat`) each run in a thread. Each reconnects with backoff, from 1 s up to 30 s.
-2. Filters drop bots and ignored users, `!commands`, links, repeats, and spam (a run of 10 or more identical characters, or one token making up 60% or more of a message of four or more tokens). The rest is truncated to `max_chars`.
-3. `lingua` picks Portuguese or English (confidence at least 0.7, otherwise `default_lang`). The text becomes "<user> disse: ..." or "<user> says: ...".
-4. A bounded queue feeds one worker thread, which synthesizes the text with Kokoro on the CPU (2 threads).
-5. The WAV goes to the overlay over a local WebSocket. The overlay plays it and replies `done`. The worker waits for that reply (clip length plus 2 s) before the next clip, so lines never overlap.
-
-## Verified
-
-Automated:
-
-- `uv run pytest -q -m "not slow"`: 300 passed.
-
-Headless smoke launch with an empty config folder:
-
-- The app started. `GET /settings` returned 200, `GET /overlay` returned 200, and `GET /api/config` returned the default values.
-- `config.toml` and `chatreader.log` were created.
-- The port was released after the process was killed.
-
-## Still to verify by you
-
-The unchecked items need live chat, OBS and a running game. They have not been run.
-
-- [ ] The tray icon appears with no console window (`pythonw -m chatreader`).
-- [ ] The settings page Test button is audible in OBS, and the source has its own volume slider.
-- [x] Live Twitch chat (tested by the author on their own stream).
-- [ ] Live YouTube chat, for a few minutes.
-- [ ] Pause, Skip and Quit work from the tray.
-- [ ] CPU use while a game runs: ______ %
-
-## Known limits and risks
-
-- `pytchat` scrapes YouTube and can break when YouTube changes. `sources/youtube.py` is isolated. The official YouTube API is a possible fallback; it is not implemented.
-- Measured on this PC with 2 CPU threads: about 0.65 s of compute per second of audio, so a 3 s message takes about 2 s to synthesize. It keeps up in steady state but adds latency. The thread count is the `cpu_threads` setting.
-- CPU use while a game runs has not been measured.
-- Runs of 10 or more identical characters (for example "kkkkkkkkkk") are dropped as spam.
-- Only one overlay connection is supported. A second connection takes over the audio.
+Early version (0.1.0). The automated tests pass and live Twitch chat has been tested. YouTube live chat reads the public page, so it can break when YouTube changes; it has not been tested live yet.
 
 ## License
 
-MIT, see [LICENSE](LICENSE). Third-party components and their licences (including GPL-3.0 parts bundled in the built zip) are listed in `THIRD_PARTY_NOTICES.txt`.
+MIT, see [LICENSE](LICENSE). Third-party components are listed in [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt); the built zip includes GPL-3.0 parts, see [Licences](docs/LICENSES.md).

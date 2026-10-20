@@ -219,6 +219,6 @@ Put a shortcut to that command on your desktop, or just turn on **Start with Win
 
 ## 11. Before you monetize
 
-- The Kokoro model and code are permissively licensed (Apache-2.0 / MIT), but the phonemizer it needs (phonemizer, espeak-ng) is GPL-3.0. Using ChatReader yourself is fine; if you share the built zip with others, read `THIRD_PARTY_NOTICES.txt` first, because redistribution comes with GPL obligations. The Portuguese voices' own training data isn't documented. If your stream earns money, ask the model's author or get legal advice. Details are in the README under *Voice licences*.
+- The Kokoro model and code are permissively licensed (Apache-2.0 / MIT), but the phonemizer it needs (phonemizer, espeak-ng) is GPL-3.0. Using ChatReader yourself is fine; if you share the built zip with others, read `THIRD_PARTY_NOTICES.txt` first, because redistribution comes with GPL obligations. The Portuguese voices' own training data isn't documented. If your stream earns money, ask the model's author or get legal advice. Details are in [Licences](LICENSES.md).
 - Twitch chat is read from the public chat feed, and YouTube chat is read by scraping the public page. Check each platform's terms for your use.
 - Everything runs locally and the server only listens on your own PC (`127.0.0.1`).
