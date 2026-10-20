@@ -18,7 +18,11 @@ def to_msg(item) -> Msg:
         role for attr, role in (("isChatOwner", "owner"), ("isChatModerator", "mod"), ("isChatSponsor", "sub"))
         if getattr(a, attr, False)
     )
-    return Msg("youtube", a.name, item.message or "", time.time(), roles)
+    kind = {"superChat": "superchat", "superSticker": "superchat", "newSponsor": "members"}.get(getattr(item, "type", ""), "chat")
+    if kind == "members":
+        return Msg("youtube", a.name, "", time.time(), roles, kind)  # the stock "Welcome New Member!" is not read
+    detail = getattr(item, "amountString", "") if kind == "superchat" else ""
+    return Msg("youtube", a.name, item.message or "", time.time(), roles, kind, detail)
 
 
 def _session(

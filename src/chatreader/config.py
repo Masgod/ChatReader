@@ -6,6 +6,7 @@ from pathlib import Path
 import tomli_w
 
 ROLE_CHOICES = {"sub", "vip", "mod"}
+EVENT_CHOICES = ["bits", "subs", "gifts", "raids", "superchat", "members"]
 TWITCH_RE = re.compile(r"[a-z0-9_]{3,25}")
 VOICE_NAME_RE = re.compile(r"[a-z]{2}_[a-z0-9]+")
 YOUTUBE_RE = re.compile(r"[A-Za-z0-9_-]{11}")
@@ -38,6 +39,9 @@ class Config:
     youtube_roles: list[str] = field(default_factory=list)
     repeat_seconds: int = 30  # skip the same text from anyone within this many seconds; 0 = off
     per_user_voices: bool = True
+    read_events: bool = False  # master switch: events are only read when this is on
+    event_kinds: list[str] = field(default_factory=lambda: list(EVENT_CHOICES))  # which events are read aloud
+    min_bits: int = 0  # ignore cheers smaller than this
 
 
 def load_config(path: Path) -> Config:
@@ -111,6 +115,10 @@ def validate(cfg: Config) -> list[str]:
             errors.append(f"{attr} must only contain sub, vip or mod")
     if not 0 <= cfg.repeat_seconds <= 600:
         errors.append("repeat_seconds must be between 0 and 600")
+    if not set(cfg.event_kinds) <= set(EVENT_CHOICES):
+        errors.append("event_kinds must only contain " + ", ".join(EVENT_CHOICES))
+    if not 0 <= cfg.min_bits <= 100000:
+        errors.append("min_bits must be between 0 and 100000")
     if not 1 <= cfg.port <= 65535:
         errors.append("port must be between 1 and 65535")
     if cfg.default_lang not in ("pt", "en"):

@@ -46,6 +46,12 @@ def explain(msg: Msg, cfg: Config, state: FilterState) -> str | None:
     text = msg.text.strip()
     if msg.user.lower() in {name.lower() for name in cfg.ignored_users}:
         return "ignored user"
+    if msg.kind != "chat":  # donations skip the chat rules: whoever paid is read
+        if not cfg.read_events or msg.kind not in cfg.event_kinds:
+            return "event off"
+        if msg.kind == "bits" and msg.detail.isdigit() and int(msg.detail) < cfg.min_bits:
+            return "min bits"
+        return None
     allowed = getattr(cfg, f"{msg.platform}_roles", [])
     if allowed and "owner" not in msg.roles and not msg.roles.intersection(allowed):
         return "role"
@@ -70,6 +76,9 @@ def apply(msg: Msg, cfg: Config, state: FilterState) -> Msg | None:
     if explain(msg, cfg, state):
         return None
     text = msg.text.strip()
+    if msg.kind != "chat":  # the announcement is always read; a bad attached message is left out
+        bad = text.startswith("!") or LINK_RE.search(text) or not any(c.isalnum() for c in text) or _is_spam(text)
+        return replace(msg, text="" if bad else _truncate(text, cfg.max_chars))
     state.recent.setdefault(msg.user, deque(maxlen=state.size)).append(text)
     state.seen[_key(text)] = msg.ts
     for k in [k for k, t in state.seen.items() if msg.ts - t > cfg.repeat_seconds]:
