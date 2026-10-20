@@ -45,4 +45,10 @@ Anyone who redistributes this zip takes on the obligations of those licences
 LGPL-3.0 (pystray): the library ships as separate files in the folder and can be
 replaced with another version.
 
+The complete list of bundled Python packages, with each one's licence and notice
+files, is in the licenses folder next to this file (generated at build time from
+the packages' own metadata). The Python runtime (python3xx.dll) is under the
+Python Software Foundation licence, and the Microsoft Visual C++ runtime DLLs are
+redistributed under Microsoft's redistribution terms.
+
 ChatReader's own source is in the repository this build came from.

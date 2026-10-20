@@ -45,3 +45,25 @@ def test_parse_args():
     assert a.home == r"C:\x y" and a.check is True
     b = parse_args([])
     assert b.home is None and b.check is False
+
+
+def test_stdio_stream_is_not_the_rotating_log(tmp_path):
+    import logging
+    from logging.handlers import RotatingFileHandler
+
+    from chatreader.paths import stdio_stream
+
+    stream = stdio_stream(tmp_path)
+    handler = RotatingFileHandler(tmp_path / "chatreader.log", maxBytes=200, backupCount=1, encoding="utf-8")
+    log = logging.getLogger("rot-test")
+    log.addHandler(handler)
+    log.setLevel(logging.INFO)
+    try:
+        for i in range(20):
+            log.info("record number %d with some padding text", i)
+    finally:
+        log.removeHandler(handler)
+        handler.close()
+        stream.close()
+    assert (tmp_path / "chatreader.log.1").exists()  # a second handle on the log would block the rename on Windows
+    assert (tmp_path / "stdio.log").exists()

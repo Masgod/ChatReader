@@ -1,9 +1,12 @@
 """`--check`: prove a build works headless. Prints one JSON line and returns an exit code."""
 import importlib
 import json
+import os
 import socket
 import urllib.request
 from pathlib import Path
+
+from chatreader.paths import ensure_streams
 
 MODULES = [
     "chatreader.main", "chatreader.server", "chatreader.controller", "chatreader.player", "chatreader.tts",
@@ -62,6 +65,7 @@ DEFAULT_STEPS = {"imports": imports_step, "language": language_step, "server": s
 
 
 def run_check(app: Path, steps=None) -> tuple[int, dict]:
+    ensure_streams(open(os.devnull, "w"))  # windowless exe: uvicorn and print need real streams
     results, ok = {}, True
     for name, fn in (steps or DEFAULT_STEPS).items():
         try:
@@ -74,5 +78,10 @@ def run_check(app: Path, steps=None) -> tuple[int, dict]:
 
 def main_check(app: Path, steps=None) -> int:
     code, result = run_check(app, steps)
-    print(json.dumps(result))
+    line = json.dumps(result)
+    print(line)
+    try:  # a windowless exe has no console to show the line on, so keep a copy to read
+        (app / "check-result.json").write_text(line + "\n", encoding="utf-8")
+    except OSError:
+        pass
     return code

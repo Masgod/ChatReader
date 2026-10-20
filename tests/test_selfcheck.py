@@ -45,3 +45,13 @@ def test_check_flag_dispatches(tmp_path):
 def test_real_steps_pass(tmp_path):
     for name in ("imports", "language", "server"):
         assert selfcheck.DEFAULT_STEPS[name](tmp_path)
+
+
+def test_check_survives_missing_streams_and_writes_result_file(tmp_path, monkeypatch):
+    import sys
+
+    monkeypatch.setattr(sys, "stdout", None)
+    monkeypatch.setattr(sys, "stderr", None)
+    assert run(["--check", "--home", str(tmp_path)]) in (0, 1)
+    data = json.loads((tmp_path / "check-result.json").read_text("utf-8"))
+    assert data["steps"]["server"].startswith("ok"), data

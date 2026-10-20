@@ -40,5 +40,15 @@ def test_notices_list_all_runtime_dependencies():
 
 def test_spec_collects_data_packages():
     spec = (ROOT / "packaging" / "chatreader.spec").read_text("utf-8")
-    for needle in ("kokoro_onnx", "espeakng_loader", "lingua", "pytchat", "web", "console=False"):
+    for needle in ("kokoro_onnx", "espeakng_loader", "lingua", "pytchat", "web", "console=False", "pystray"):
         assert needle in spec, needle
+
+
+def test_runtime_closure_includes_transitive_dependencies():
+    closure = _build().runtime_closure(["fastapi"])
+    assert {"fastapi", "starlette", "pydantic"} <= closure
+
+
+def test_copy_licenses_writes_files(tmp_path):
+    n = _build().copy_licenses({"fastapi", "pytchat", "not-installed-xyz"}, tmp_path)
+    assert n >= 1 and any(tmp_path.rglob("*"))

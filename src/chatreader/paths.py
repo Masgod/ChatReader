@@ -26,6 +26,12 @@ def ensure_streams(log_stream) -> None:
         sys.stderr = log_stream
 
 
+def stdio_stream(app: Path):
+    """Where stray print output goes when there is no console. Never the rotating log: a second
+    open handle on it stops Windows from renaming it at rollover."""
+    return open(app / "stdio.log", "a", encoding="utf-8")
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(prog="chatreader")
     p.add_argument("--home", help="folder for config, log and voices")

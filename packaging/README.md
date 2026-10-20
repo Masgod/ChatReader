@@ -5,7 +5,7 @@ uv run --group build python packaging/build.py
 ```
 
 Output: `dist/ChatReader/ChatReader.exe`, `dist/ChatReader-<version>-win64.zip` and its `.sha256`.
-Check the build with `dist\ChatReader\ChatReader.exe --check` (prints one JSON line; exit 0 means ok).
+Check the build with `Start-Process -Wait -PassThru dist\ChatReader\ChatReader.exe -ArgumentList '--check'` (the exe has no console: exit code 0 means ok, and the JSON line is saved as `check-result.json` in the data folder; add `--home <folder>` to choose it).
 
 ## Fewer antivirus false positives
 

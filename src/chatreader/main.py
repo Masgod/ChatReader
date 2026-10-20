@@ -10,7 +10,7 @@ from chatreader import startup, tray
 from chatreader.config import Config, load_config, save_config
 from chatreader.controller import Controller
 from chatreader.events import EventLog, LogMirror
-from chatreader.paths import app_dir, ensure_streams
+from chatreader.paths import app_dir, ensure_streams, stdio_stream
 from chatreader.player import Player
 from chatreader.server import Hub, create_app, run_server
 from chatreader.sources.twitch import run_twitch
@@ -67,7 +67,7 @@ def _install_excepthooks() -> None:
 def main(home: str | None = None) -> None:
     app = app_dir(home)
     app.mkdir(parents=True, exist_ok=True)
-    ensure_streams(open(app / "chatreader.log", "a", encoding="utf-8"))
+    ensure_streams(stdio_stream(app))
     cfg_path = app / "config.toml"
     first_run = not cfg_path.exists()
     cfg = load_config(cfg_path)

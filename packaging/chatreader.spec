@@ -21,6 +21,7 @@ a = Analysis(
     datas=datas,
     binaries=binaries,
     hiddenimports=hiddenimports,
+    module_collection_mode={"pystray": "py"},  # LGPL: ship it as replaceable files, not inside the exe
 )
 pyz = PYZ(a.pure)
 exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="ChatReader", console=False,

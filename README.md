@@ -60,7 +60,7 @@ Open the overlay in one place only. Only one overlay connection is supported.
 
 ## Packaged app
 
-`uv run --group build python packaging/build.py` builds `dist/ChatReader/ChatReader.exe` (a windowless tray app, no Python needed), a zip and its SHA-256 file; `ChatReader.exe --check` self-tests the build. Data lives in `%APPDATA%\ChatReader` (override with `--home <folder>` or `CHATREADER_HOME`). Start with Windows uses the per-user registry Run key. The build is unsigned, so Windows or antivirus may warn; see `packaging/README.md`. The zip bundles GPL-3.0 components (phonemizer, espeak-ng): `THIRD_PARTY_NOTICES.txt` lists everything and what redistribution requires.
+`uv run --group build python packaging/build.py` builds `dist/ChatReader/ChatReader.exe` (a windowless tray app, no Python needed), a zip and its SHA-256 file; `ChatReader.exe --check` self-tests the build (exit code 0 = ok; the result is saved as `check-result.json` in the data folder). Data lives in `%APPDATA%\ChatReader` (override with `--home <folder>` or `CHATREADER_HOME`). Start with Windows uses the per-user registry Run key. The build is unsigned, so Windows or antivirus may warn; see `packaging/README.md`. The zip bundles GPL-3.0 components (phonemizer, espeak-ng): `THIRD_PARTY_NOTICES.txt` and the `licenses` folder in the zip list everything and what redistribution requires.
 
 ## OBS dock and status API
 

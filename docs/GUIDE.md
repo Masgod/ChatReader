@@ -26,7 +26,7 @@ Unzip `ChatReader-<version>-win64.zip` anywhere and run `ChatReader.exe`. Nothin
 - Windows may show "Windows protected your PC" because the app is not signed. Choose **More info**, then **Run anyway**. You can verify the download with the `.sha256` file next to the zip (`certutil -hashfile ChatReader-<version>-win64.zip SHA256`).
 - Run it a second time and it just opens the control center of the copy that is already running.
 - **Start with Windows** (Settings, System) adds an entry for the current user. Turn it off there, or in Task Manager's Startup tab.
-- `ChatReader.exe --check` runs a quick self test and prints one line of JSON (exit code 0 means ok).
+- `ChatReader.exe --check` runs a quick self test. The app has no console window, so run it as `Start-Process -Wait -PassThru .\ChatReader.exe -ArgumentList '--check'` in PowerShell: the exit code is 0 when everything is ok, and the result (one line of JSON) is saved in `check-result.json` in the data folder.
 - The zip bundles components under several licences, including GPL-3.0 ones (see `THIRD_PARTY_NOTICES.txt`). Read it before you share the zip.
 
 ### Option B: from source
