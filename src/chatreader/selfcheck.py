@@ -81,6 +81,7 @@ def main_check(app: Path, steps=None) -> int:
     line = json.dumps(result)
     print(line)
     try:  # a windowless exe has no console to show the line on, so keep a copy to read
+        app.mkdir(parents=True, exist_ok=True)
         (app / "check-result.json").write_text(line + "\n", encoding="utf-8")
     except OSError:
         pass

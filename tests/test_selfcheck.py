@@ -55,3 +55,9 @@ def test_check_survives_missing_streams_and_writes_result_file(tmp_path, monkeyp
     assert run(["--check", "--home", str(tmp_path)]) in (0, 1)
     data = json.loads((tmp_path / "check-result.json").read_text("utf-8"))
     assert data["steps"]["server"].startswith("ok"), data
+
+
+def test_check_creates_a_missing_home_folder(tmp_path):
+    home = tmp_path / "new" / "home"
+    assert selfcheck.main_check(home, steps={"a": ok()}) == 0
+    assert (home / "check-result.json").exists()
