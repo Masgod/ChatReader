@@ -1,6 +1,6 @@
 # Development
 
-Running from source, building the app, how it works and known limits.
+Running from source, building the app, and how it works. Test status and known limits are in [Status](STATUS.md).
 
 ## Requirements
 
@@ -47,34 +47,3 @@ The app lives in the system tray (purple circle icon). Set `CHATREADER_HOME` to 
 3. `lingua` picks Portuguese or English (confidence at least 0.7, otherwise `default_lang`). The text becomes "<user> disse: ..." or "<user> says: ...".
 4. A bounded queue feeds one worker thread, which synthesizes the text with Kokoro on the CPU (2 threads).
 5. The WAV goes to the overlay over a local WebSocket. The overlay plays it and replies `done`. The worker waits for that reply (clip length plus 2 s) before the next clip, so lines never overlap.
-
-## Verified
-
-Automated:
-
-- `uv run pytest -q -m "not slow"`: 300 passed.
-
-Headless smoke launch with an empty config folder:
-
-- The app started. `GET /settings` returned 200, `GET /overlay` returned 200, and `GET /api/config` returned the default values.
-- `config.toml` and `chatreader.log` were created.
-- The port was released after the process was killed.
-
-## Still to verify by you
-
-The unchecked items need live chat, OBS and a running game. They have not been run.
-
-- [ ] The tray icon appears with no console window (`pythonw -m chatreader`).
-- [ ] The settings page Test button is audible in OBS, and the source has its own volume slider.
-- [x] Live Twitch chat (tested by the author on their own stream).
-- [ ] Live YouTube chat, for a few minutes.
-- [ ] Pause, Skip and Quit work from the tray.
-- [ ] CPU use while a game runs: ______ %
-
-## Known limits and risks
-
-- `pytchat` scrapes YouTube and can break when YouTube changes. `sources/youtube.py` is isolated. The official YouTube API is a possible fallback; it is not implemented.
-- Measured on this PC with 2 CPU threads: about 0.65 s of compute per second of audio, so a 3 s message takes about 2 s to synthesize. It keeps up in steady state but adds latency. The thread count is the `cpu_threads` setting.
-- CPU use while a game runs has not been measured.
-- Runs of 10 or more identical characters (for example "kkkkkkkkkk") are dropped as spam.
-- Only one overlay connection is supported. A second connection takes over the audio.

@@ -26,12 +26,13 @@ The build is not signed, so Windows may warn; the [guide](docs/GUIDE.md#1-instal
 |---|---|
 | [User guide](docs/GUIDE.md) | Install, OBS setup, settings, troubleshooting |
 | [Configuration and API](docs/CONFIGURATION.md) | Every `config.toml` key, tray menu, OBS dock, local API |
-| [Development](docs/DEVELOPMENT.md) | Run from source, build the app, how it works, known limits |
+| [Development](docs/DEVELOPMENT.md) | Run from source, build the app, how it works |
+| [Status](docs/STATUS.md) | What has been tested, what has not, known limits |
 | [Licences](docs/LICENSES.md) | Voice model, GPL components, what to check before monetizing |
 
 ## Status
 
-Early version (0.1.0). The automated tests pass and live Twitch chat has been tested. YouTube live chat reads the public page, so it can break when YouTube changes; it has not been tested live yet.
+Early version (0.1.0). The automated tests pass and live Twitch chat has been tested. YouTube live chat reads the public page, so it can break when YouTube changes; it has not been tested live yet. Details and known limits: [Status](docs/STATUS.md).
 
 ## License
 
