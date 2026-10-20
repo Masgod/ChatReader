@@ -67,3 +67,7 @@ def test_stdio_stream_is_not_the_rotating_log(tmp_path):
         stream.close()
     assert (tmp_path / "chatreader.log.1").exists()  # a second handle on the log would block the rename on Windows
     assert (tmp_path / "stdio.log").exists()
+
+
+def test_unknown_arguments_are_ignored():
+    assert parse_args(["--home", "x", "--surprise"]).home == "x"

@@ -8,9 +8,10 @@ _held = []  # the mutex handle must outlive the call or Windows frees it
 def _create_mutex(name: str):
     import ctypes
 
-    kernel32 = ctypes.windll.kernel32
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # plain windll can lose the error code between calls
+    kernel32.CreateMutexW.restype = ctypes.c_void_p
     handle = kernel32.CreateMutexW(None, False, name)
-    return handle, kernel32.GetLastError() == _ERROR_ALREADY_EXISTS
+    return handle, ctypes.get_last_error() == _ERROR_ALREADY_EXISTS
 
 
 def acquire(name: str = r"Local\ChatReader", create_mutex=_create_mutex) -> bool:

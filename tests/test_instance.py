@@ -39,3 +39,11 @@ def test_port_read_from_config(tmp_path):
     (tmp_path / "config.toml").write_text('port = "x"\n', encoding="utf-8")
     assert read_port(tmp_path) == 8765
     assert not (tmp_path / "config.toml.bad").exists()  # reading must never rename or rewrite the file
+
+
+def test_real_mutex_second_acquire_fails():
+    from chatreader import instance
+
+    name = r"Local\ChatReaderTest-" + __import__("uuid").uuid4().hex
+    assert instance.acquire(name) is True
+    assert instance.acquire(name) is False

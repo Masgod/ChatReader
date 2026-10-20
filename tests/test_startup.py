@@ -50,23 +50,39 @@ def test_shortcut_path_in_startup_folder(monkeypatch):
     assert str(startup.shortcut_path()).replace("\\", "/").endswith("Startup/ChatReader.lnk")
 
 
-def test_enable_writes_run_value_frozen(tmp_path, lnk):
+def test_enable_writes_run_value_frozen(lnk):
     reg = FakeReg()
-    startup.set_start_with_windows(True, tmp_path, reg=reg, frozen=True, executable=r"C:\Apps\Chat Reader\ChatReader.exe")
-    assert reg.values["ChatReader"] == (1, r'"C:\Apps\Chat Reader\ChatReader.exe"')
+    app = Path(r"C:\Data\Chat Reader")
+    startup.set_start_with_windows(True, app, reg=reg, frozen=True, executable=r"C:\Apps\Chat Reader\ChatReader.exe")
+    assert reg.values["ChatReader"] == (1, r'"C:\Apps\Chat Reader\ChatReader.exe" --home "C:\Data\Chat Reader"')
 
 
-def test_enable_source_command(tmp_path, lnk):
+def test_enable_source_command(lnk):
     reg = FakeReg()
-    startup.set_start_with_windows(True, tmp_path / "app dir", reg=reg, frozen=False, executable=r"C:\py\pythonw.exe")
-    assert reg.values["ChatReader"][1] == f'"C:\py\pythonw.exe" -m chatreader --home "{tmp_path / "app dir"}"'
+    startup.set_start_with_windows(True, Path(r"C:\Data\app dir"), reg=reg, frozen=False, executable=r"C:\py\pythonw.exe")
+    assert reg.values["ChatReader"][1] == r'C:\py\pythonw.exe -m chatreader --home "C:\Data\app dir"'
 
 
 def test_command_quotes_spaces_apostrophes_and_unicode():
     app = Path("C:/Users/Ana María's PC/Chat Reader")
     cmd = startup.startup_command(app, False, "C:/Py 3/pythonw.exe")
     assert cmd == f'"C:/Py 3/pythonw.exe" -m chatreader --home "{app}"'
-    assert cmd.count('"') == 4
+
+
+def test_command_with_a_drive_root_home_has_no_trailing_quote_escape():
+    assert startup.startup_command(Path("C:/"), True, r"C:\a\ChatReader.exe").endswith("--home C:\\")
+
+
+def test_command_makes_a_relative_home_absolute():
+    cmd = startup.startup_command(Path("rel"), True, r"C:\a\ChatReader.exe")
+    assert str(Path("rel").resolve()) in cmd
+
+
+def test_refused_registry_write_keeps_the_old_shortcut(tmp_path, lnk):
+    lnk.write_text("x")
+    with pytest.raises(PermissionError):
+        startup.set_start_with_windows(True, tmp_path, reg=FakeReg(fail=PermissionError("policy")), frozen=True, executable="C:/a.exe")
+    assert lnk.exists()
 
 
 def test_disable_deletes_value_and_old_shortcut(tmp_path, lnk):

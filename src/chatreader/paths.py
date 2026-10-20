@@ -36,4 +36,4 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(prog="chatreader")
     p.add_argument("--home", help="folder for config, log and voices")
     p.add_argument("--check", action="store_true", help="run a headless self test and exit")
-    return p.parse_args(argv)
+    return p.parse_known_args(argv)[0]  # an unknown flag must not kill a windowless launch silently

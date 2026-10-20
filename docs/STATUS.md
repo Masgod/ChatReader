@@ -6,7 +6,7 @@ Version 0.1.0, an early release. What has been tested, what has not, and the kno
 
 Automated:
 
-- `uv run pytest -q -m "not slow"`: 300 passed.
+- `uv run pytest -q -m "not slow"`: 351 passed.
 
 Headless smoke launch with an empty config folder:
 
@@ -32,3 +32,17 @@ The unchecked items need live chat, OBS and a running game.
 - CPU use while a game runs has not been measured.
 - Runs of 10 or more identical characters (for example "kkkkkkkkkk") are dropped as spam.
 - Only one overlay connection is supported. A second connection takes over the audio.
+
+## Roadmap
+
+Planned, in no fixed order. Open an issue to discuss or vote on any of these.
+
+- **On-screen text overlay** in OBS (who spoke, bits, subs). To be designed in detail.
+- **Priority for events** in the speech queue, so cheers and subs are not dropped when the queue is full.
+- **Channel point rewards** (custom Twitch rewards). Needs a Twitch login (OAuth), so it needs its own design.
+- **Installer and code signing**, to avoid the SmartScreen warning and allow updates.
+
+Contributions welcome:
+
+- **Stream Deck / hotkeys** (pause, skip, mute). The maintainer has no Stream Deck, so this is open for someone who does: please open an issue or a pull request.
+
