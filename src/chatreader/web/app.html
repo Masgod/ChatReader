@@ -145,6 +145,31 @@
     </details>
 
     <details class="sect" open>
+      <summary><h2>Events</h2></summary>
+      <div class="card">
+        <div class="row grid">
+          <div><div class="name" id="l-event_kinds">Read aloud</div><div class="hint">Cheers, subs and Super Chat are read as “viewer gave 100 bits: message”</div></div>
+          <div class="roles" id="event_kinds" role="group" aria-labelledby="l-event_kinds" data-roles="event_kinds">
+            <button type="button" class="pill" data-role="bits">Bits</button>
+            <button type="button" class="pill" data-role="subs">Subs</button>
+            <button type="button" class="pill" data-role="gifts">Gifts</button>
+            <button type="button" class="pill" data-role="raids">Raids</button>
+            <button type="button" class="pill" data-role="superchat">Super Chat</button>
+            <button type="button" class="pill" data-role="members">Members</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="txt"><div class="name">Minimum bits</div><div class="hint">Smaller cheers are not read</div></div>
+          <div class="field step" data-num="min_bits" data-min="0" data-max="100000" data-step="10">
+            <button type="button" data-d="-1" aria-label="Decrease minimum bits">−</button>
+            <input type="text" id="min_bits" inputmode="numeric" aria-label="Minimum bits">
+            <button type="button" data-d="1" aria-label="Increase minimum bits">+</button>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="sect" open>
       <summary><h2>Reading</h2></summary>
       <div class="card">
         <div class="row">

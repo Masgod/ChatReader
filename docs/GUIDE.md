@@ -128,6 +128,10 @@ The page has a footer with **Save** and **Test voice**. When you change somethin
 - **Twitch channel**, **YouTube video**: see [section 4](#4-connect-your-chats).
 - **Who is read** (one per platform): Everyone, or only Subscribers (Members on YouTube), VIPs (Twitch only) and/or Mods. The channel owner is always read. If the platform doesn't report a role for a viewer, that viewer counts as having none. Messages that don't match show as `skipped:role` in the Console.
 
+### Events
+- **Read aloud**: which events are spoken, as "Fulano doou 100 bits: message". Twitch gives bits, subs and resubs, gift subs and raids without logging in. YouTube gives Super Chat, Super Stickers and new members. Events skip the role, repeat and command rules; only **Ignored users** still blocks them. A link or spam in the attached message is left out, the announcement is still read. Channel point rewards are not supported (Twitch requires a login for them), and YouTube gift memberships are not reported by the chat library.
+- **Minimum bits**: cheers below this are not read (`skipped:min bits` in the Console; switched-off kinds show `skipped:event off`).
+
 ### Voices
 - **Default language**: used when ChatReader isn't sure which language a message is in (very short messages like `gg`, or mixed text).
 - **Portuguese voice** / **English voice**: pick from the voices the model actually has (a text box if the model is not loaded yet). The ▶ button plays a sample of the *saved* voice, so press **Save** first after changing it. See [Voices](#8-voices).

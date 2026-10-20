@@ -1,4 +1,5 @@
 import random
+import re
 import threading
 import time
 from typing import Callable
@@ -20,12 +21,20 @@ def _roles(badges: str) -> frozenset[str]:
     return frozenset(_BADGE_ROLES[n] for n in names if n in _BADGE_ROLES)
 
 
-def parse_privmsg(line: str) -> Msg | None:
+def _split_tags(line: str) -> tuple[dict[str, str], str]:
     line = line.rstrip("\r\n")
     tags: dict[str, str] = {}
     if line.startswith("@"):
         tag_str, _, line = line.partition(" ")
         tags = dict(t.split("=", 1) for t in tag_str[1:].split(";") if "=" in t)
+    return tags, line
+
+
+CHEERMOTE_RE = re.compile(r"^[A-Za-z]+\d+$")
+
+
+def parse_privmsg(line: str) -> Msg | None:
+    tags, line = _split_tags(line)
     if not line.startswith(":"):
         return None
     prefix, _, cmd = line.partition(" ")
@@ -35,7 +44,35 @@ def parse_privmsg(line: str) -> Msg | None:
     if not sep:
         return None
     nick = prefix[1:].split("!", 1)[0]
-    return Msg("twitch", tags.get("display-name") or nick, text, time.time(), _roles(tags.get("badges", "")))
+    user, roles = tags.get("display-name") or nick, _roles(tags.get("badges", ""))
+    if tags.get("bits", "").isdigit():
+        text = " ".join(w for w in text.split() if not CHEERMOTE_RE.match(w))
+        return Msg("twitch", user, text, time.time(), roles, "bits", tags["bits"])
+    return Msg("twitch", user, text, time.time(), roles)
+
+
+def parse_notice(line: str) -> Msg | None:
+    """Subs, resubs, gifts and raids (USERNOTICE). Anything else, or a line without a name, gives None."""
+    tags, line = _split_tags(line)
+    _, _, rest = line.partition(" ")
+    if not rest.startswith("USERNOTICE "):
+        return None
+    user = tags.get("display-name") or tags.get("login", "")
+    _, _, text = rest.partition(" :")
+    kind_id = tags.get("msg-id", "")
+    if not user:
+        return None
+    if kind_id in ("sub", "resub"):
+        kind, detail = "subs", tags.get("msg-param-cumulative-months", "") if kind_id == "resub" else ""
+    elif kind_id == "submysterygift":
+        kind, detail = "gifts", tags.get("msg-param-mass-gift-count", "1")
+    elif kind_id == "subgift" and not tags.get("msg-param-community-gift-id"):
+        kind, detail = "gifts", "1"  # gifts inside a mystery gift are counted by the mystery gift
+    elif kind_id == "raid":
+        kind, detail = "raids", tags.get("msg-param-viewerCount", "")
+    else:
+        return None
+    return Msg("twitch", user, text, time.time(), kind=kind, detail=detail)
 
 
 def _session(
@@ -49,7 +86,7 @@ def _session(
     try:
         with connect(URL) as ws:
             ws.send(f"NICK justinfan{random.randint(10000, 99999)}")
-            ws.send("CAP REQ :twitch.tv/tags")
+            ws.send("CAP REQ :twitch.tv/tags twitch.tv/commands")
             ws.send(f"JOIN #{channel}")
             on_status("connected")
             while not stop.is_set():
@@ -61,7 +98,7 @@ def _session(
                     if line.startswith("PING"):
                         ws.send("PONG :tmi.twitch.tv")
                         continue
-                    msg = parse_privmsg(line)
+                    msg = parse_privmsg(line) or parse_notice(line)
                     if msg is not None:
                         delivered = True
                         on_msg(msg)

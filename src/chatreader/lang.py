@@ -1,5 +1,6 @@
 from lingua import Language, LanguageDetectorBuilder
 
+from chatreader.announce import event_text
 from chatreader.models import Msg
 
 # Built once at import: the lingua model load is slow.
@@ -21,6 +22,8 @@ def detect_lang(text: str, default: str) -> str:
 
 
 def spoken_text(msg: Msg, lang: str, announce: bool) -> str:
+    if msg.kind != "chat":
+        return event_text(msg, lang)
     if not announce:
         return msg.text
     name = msg.user.replace("_", " ")
