@@ -13,6 +13,12 @@ Reads your **Twitch** and **YouTube** live chat out loud, in Portuguese (BR), En
 - Control from the tray icon or an OBS dock: pause, skip, edit the queue
 - Local only: the server listens on `127.0.0.1`
 
+## How it works
+
+![ChatReader architecture: chat sources, controller, Kokoro voice, local server, OBS overlay](docs/architecture.png)
+
+Chat is filtered, turned into speech on your PC, and played by an OBS Browser Source. Details in [Development](docs/DEVELOPMENT.md#how-it-works).
+
 ## Get started
 
 1. Download `ChatReader-<version>-win64.zip` from [Releases](https://github.com/Masgod/ChatReader/releases), unzip it and run `ChatReader.exe`. The voice model (about 120 MB) downloads on first run.
