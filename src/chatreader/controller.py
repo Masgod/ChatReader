@@ -1,9 +1,11 @@
 """Wires sources -> filters -> language -> player, and applies config changes live."""
 import logging
 import threading
+from dataclasses import replace
 from typing import Callable
 
 from chatreader.config import Config
+from chatreader.emotes import speak_emotes
 from chatreader.filters import FilterState, apply, explain
 from chatreader.lang import detect_lang, spoken_text
 from chatreader.models import Msg
@@ -40,7 +42,13 @@ class Controller:
                 return
             lang = detect_lang(msg.text, cfg.default_lang)
             voice = self._pick_voice(cfg, msg, lang)
-            self._player.submit(spoken_text(msg, lang, cfg.announce_user), lang, msg.user, voice)
+            spoken = msg
+            if cfg.speak_emotes and msg.kind == "chat":
+                spoken = replace(msg, text=speak_emotes(msg.text, lang))
+                if not spoken.text:
+                    self._record(msg.user, msg.text, "skipped:emotes only")
+                    return
+            self._player.submit(spoken_text(spoken, lang, cfg.announce_user), lang, msg.user, voice)
             self._record(msg.user, msg.text, "queued")
         except Exception:
             log.exception("message dropped")

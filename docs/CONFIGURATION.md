@@ -40,6 +40,7 @@ The file uses the defaults below when a key is missing. Keys that are not known 
 | `twitch_roles` / `youtube_roles` | `[]` | Who is read on that platform: empty means everyone, otherwise any of `sub`, `vip`, `mod` (the owner is always read). |
 | `repeat_seconds` | `30` | Skip the same text from anyone within this many seconds; `0` turns it off. |
 | `per_user_voices` | `true` | Give each viewer a stable voice picked from the model's voices. |
+| `speak_emotes` | `true` | Read laughs (`LUL`, `KEKW`, `kkkk`, `rsrs`) as a laugh and leave out other emotes (`Kappa`, `:name:`). A message that is only emotes is skipped. |
 | `youtube_channel` | `""` | `@handle` or `UC...` channel ID. When set and `youtube_video_id` is empty, the app waits for the channel's live stream and connects by itself. |
 
 `config.example.toml` lists the same keys with comments. The app does not copy it; it writes the defaults.

@@ -389,3 +389,16 @@ def test_controller_no_voice_when_disabled_and_for_speak_test():
     c.on_msg(Msg("twitch", "alice", "eu gostei muito dessa jogada ontem", 0.0))
     c.speak_test("hello there")
     assert player.voices == ["", ""]
+
+
+def test_controller_speaks_laughs_and_skips_emote_only_messages():
+    c, player = _voiced(Config(announce_user=False), FakeTTS())
+    c.on_msg(Msg("twitch", "alice", "great play Kappa KEKW", 0.0))
+    c.on_msg(Msg("twitch", "bob", "Kappa", 1.0))
+    assert [t for t, _ in player.submitted] == ["great play ha ha"]
+
+
+def test_controller_leaves_emotes_when_disabled():
+    c, player = _voiced(Config(announce_user=False, speak_emotes=False), FakeTTS())
+    c.on_msg(Msg("twitch", "alice", "Kappa", 0.0))
+    assert [t for t, _ in player.submitted] == ["Kappa"]
