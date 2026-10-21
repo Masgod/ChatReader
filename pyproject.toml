@@ -1,6 +1,6 @@
 [project]
 name = "chatreader"
-version = "0.1.0"
+version = "0.2.0"
 description = "Windows tray app that reads Twitch and YouTube chat aloud with Kokoro TTS"
 requires-python = ">=3.11"
 dependencies = [

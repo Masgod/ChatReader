@@ -1,6 +1,6 @@
 # ChatReader guide
 
-ChatReader reads your **Twitch** and **YouTube** live chat out loud, in Portuguese (BR) and English. It runs on your PC, hides in the Windows system tray, and sends the voice to **OBS** so you can control its volume like any other source.
+ChatReader reads your **Twitch** and **YouTube** live chat out loud, in Portuguese (BR), English, Spanish, French or Italian. It runs on your PC, hides in the Windows system tray, and sends the voice to **OBS** so you can control its volume like any other source.
 
 - [1. Install](#1-install) (packaged app or from source)
 - [2. First start](#2-first-start)
@@ -133,8 +133,9 @@ The page has a footer with **Save** and **Test voice**. When you change somethin
 - **Minimum bits**: cheers below this are not read (`skipped:min bits` in the Console; switched-off kinds show `skipped:event off`).
 
 ### Voices
-- **Default language**: used when ChatReader isn't sure which language a message is in (very short messages like `gg`, or mixed text).
-- **Portuguese voice** / **English voice**: pick from the voices the model actually has (a text box if the model is not loaded yet). The ▶ button plays a sample of the *saved* voice, so press **Save** first after changing it. See [Voices](#8-voices).
+- **Languages**: tick the languages to read. Portuguese and English are on by default; Spanish, French and Italian are marked beta because their wording (for example "dijo", "dit", "ha detto" and the event sentences) has not been checked by a native speaker. At least one stays on, and messages in other languages are read with whichever enabled language fits best.
+- **Default language**: used when ChatReader isn't sure which language a message is in (very short messages like `gg`, or mixed text). Only enabled languages are offered.
+- **A voice for each enabled language**: pick from the voices the model actually has (a text box if the model is not loaded yet). The ▶ button plays a sample of the *saved* voice, so press **Save** first after changing it. See [Voices](#8-voices).
 
 ### Speed and CPU
 - **Speed** (Voices): 0.8 to 1.4. Higher is faster speech.
@@ -149,6 +150,7 @@ ChatReader also starts speaking a long message after its first sentence is ready
 - **Repeat window**: skips a message if the same person sent the same text within their last N messages. `0` turns it off.
 - **Skip the same text** (seconds): skips a message if anyone sent the same text in the last N seconds (ignoring capitals and extra spaces), so copy-paste floods are read once. Default 30; `0` turns it off.
 - **A different voice for each viewer**: see [Voices](#8-voices).
+- **Read laughs, skip emotes**: on by default. `LUL`, `KEKW`, `kkkk`, `rsrs` and `haha` are read as a laugh; `Kappa`, `PogChamp`, `<3` and `:name:` emotes are left out, and a message that is only emotes is skipped (`skipped:emotes only` in the Console).
 
 ### Ignored users
 Bots and people you never want read. Type a name and press **Add**, or click **×** on a chip to remove it. Names are not case sensitive, and a leading `@` is ignored. You can add several at once separated by spaces or commas. Common bots (nightbot, streamelements, streamlabs, moobot) are there by default.
@@ -171,7 +173,7 @@ ChatReader reads **every message** except:
 - viewers whose **role** is not allowed (see Who is read)
 - **spam**: ten or more identical characters in a row (`aaaaaaaaaa`), or one word making up most of a message (`LUL LUL LUL LUL`)
 
-Language is detected for each message, so one chat can mix Portuguese and English and each message gets the right voice.
+Language is detected for each message, so one chat can mix the enabled languages and each message gets the right voice.
 
 ## 8. Voices
 
@@ -181,10 +183,13 @@ ChatReader uses **Kokoro**. You can type any Kokoro voice name in the voice fiel
 |---|---|
 | Portuguese (BR) | `pf_dora` (female, default), `pm_alex`, `pm_santa` (male) |
 | English | `af_heart` (default), `af_bella`, `am_michael`, `bf_emma` |
+| Spanish (beta) | `ef_dora` (default), `em_alex`, `em_santa` |
+| French (beta) | `ff_siwis` |
+| Italian (beta) | `if_sara` (default), `im_nicola` |
 
 If you type a name that doesn't exist, you get a warning and that language is not spoken.
 
-**A voice for each viewer:** with the switch on (the default), each viewer gets one voice, chosen once from that language's voices and kept across streams and restarts. The Portuguese and English voice settings stay as the defaults, used for the Test voice button and when no voice list is available. Portuguese has only three voices, so several viewers share them. Turn the switch off to use one voice per language for everyone. There is no screen yet to pick a viewer's voice by hand.
+**A voice for each viewer:** with the switch on (the default), each viewer gets one voice, chosen once from that language's voices and kept across streams and restarts. The per-language voice settings stay as the defaults, used for the Test voice button and when no voice list is available. Portuguese has only three voices, so several viewers share them. Turn the switch off to use one voice per language for everyone. There is no screen yet to pick a viewer's voice by hand.
 
 ## 9. Daily use
 

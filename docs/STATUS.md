@@ -1,12 +1,12 @@
 # Status
 
-Version 0.1.0, an early release. What has been tested, what has not, and the known limits.
+Version 0.2.0, an early release. What has been tested, what has not, and the known limits.
 
 ## Verified
 
 Automated:
 
-- `uv run pytest -q -m "not slow"`: 351 passed.
+- `uv run pytest -q -m "not slow"`: 435 passed.
 
 Headless smoke launch with an empty config folder:
 
