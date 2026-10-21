@@ -187,3 +187,14 @@ def test_event_kinds_and_min_bits_are_validated():
     assert validate(Config(event_kinds=[])) == []
     assert validate(Config(min_bits=-1)) != []
     assert validate(Config(min_bits=100001)) != []
+
+
+@pytest.mark.parametrize("lang", ["es", "fr", "it"])
+def test_event_text_in_other_languages(lang):
+    from chatreader.announce import event_text
+    from chatreader.models import Msg
+
+    msg = Msg("twitch", "alice", "", 0, kind="bits", detail="5")
+    text = event_text(msg, lang)
+    assert text.startswith("alice ") and "5" in text
+    assert text != event_text(msg, "en")

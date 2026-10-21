@@ -21,3 +21,10 @@ def test_emotes(text, lang, out):
 @pytest.mark.parametrize("text", ["eu gostei muito dessa jogada", "that was a great play", "pogo stick and kappas", "shake the kitchen, thanks"])
 def test_normal_words_untouched(text):
     assert speak_emotes(text, "en") == text
+
+
+@pytest.mark.parametrize("code", ["pt", "en", "es", "fr", "it"])
+def test_laugh_comes_from_the_language_table(code):
+    from chatreader.languages import LANGUAGES
+
+    assert speak_emotes("KEKW", code) == LANGUAGES[code].laugh
