@@ -17,7 +17,7 @@ Python libraries bundled in the zip
 kokoro-onnx          MIT                      https://github.com/thewh1teagle/kokoro-onnx
 onnxruntime          MIT                      https://github.com/microsoft/onnxruntime
 numpy                BSD-3-Clause and others  https://numpy.org
-lingua-language-detector  Apache-2.0          https://github.com/pemistahl/lingua-py
+fasttext-predict     MIT                      https://github.com/searxng/fasttext-predict
 pytchat              MIT                      https://github.com/taizan-hokuto/pytchat
 websockets           BSD-3-Clause             https://github.com/python-websockets/websockets
 fastapi              MIT                      https://github.com/fastapi/fastapi
@@ -27,6 +27,12 @@ tomli-w              MIT                      https://github.com/hukkin/tomli-w
 pystray              LGPL-3.0                 https://github.com/moses-palmer/pystray
 PyInstaller bootloader  GPL-2.0-or-later with the PyInstaller exception, which
                      allows bundling in any application  https://pyinstaller.org
+
+Language-identification model bundled in the zip
+------------------------------------------------
+lid.176.ftz (fastText language identification), CC BY-SA 3.0, Facebook AI Research
+  https://fasttext.cc/docs/en/language-identification.html
+Unmodified; it is only read by ChatReader to guess the language of a chat message.
 
 GPL components (important)
 --------------------------

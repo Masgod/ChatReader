@@ -24,7 +24,7 @@ def imports_step(app: Path) -> str:
 def language_step(app: Path) -> str:
     from chatreader.lang import detect_lang
 
-    got = detect_lang("this is a simple english sentence about the weather", "pt")
+    got = detect_lang("this is a simple english sentence about the weather", ["pt", "en"], "pt")
     if got != "en":
         raise RuntimeError(f"detected {got!r}, expected 'en'")
     return "detector works"

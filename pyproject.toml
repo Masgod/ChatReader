@@ -5,7 +5,6 @@ description = "Windows tray app that reads Twitch and YouTube chat aloud with Ko
 requires-python = ">=3.11"
 dependencies = [
     "kokoro-onnx",
-    "lingua-language-detector",
     "pytchat",
     "websockets",
     "fastapi",
@@ -13,6 +12,7 @@ dependencies = [
     "pystray",
     "Pillow",
     "tomli-w",
+    "fasttext-predict>=0.9.2.4",
 ]
 
 [project.scripts]

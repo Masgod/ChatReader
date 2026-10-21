@@ -40,7 +40,7 @@ class Controller:
             if msg is None:
                 self._record(original.user, original.text, f"skipped:{reason}" if reason else "skipped")
                 return
-            lang = detect_lang(msg.text, cfg.default_lang)
+            lang = detect_lang(msg.text, cfg.languages, cfg.default_lang)
             voice = self._pick_voice(cfg, msg, lang)
             spoken = msg
             if cfg.speak_emotes and msg.kind == "chat":
@@ -138,7 +138,7 @@ class Controller:
         self._player.skip()
 
     def speak_test(self, text: str) -> None:
-        lang = detect_lang(text, self.cfg.default_lang)
+        lang = detect_lang(text, self.cfg.languages, self.cfg.default_lang)
         self._player.submit(text, lang, "test")
 
     def shutdown(self) -> None:

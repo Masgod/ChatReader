@@ -1,24 +1,47 @@
-from lingua import Language, LanguageDetectorBuilder
+import functools
+import logging
+from pathlib import Path
 
 from chatreader.announce import event_text
+from chatreader.languages import LANGUAGES
 from chatreader.models import Msg
 
-# Built once at import: the lingua model load is slow.
-_DETECTOR = LanguageDetectorBuilder.from_languages(Language.PORTUGUESE, Language.ENGLISH).build()
-_CODES = {Language.PORTUGUESE: "pt", Language.ENGLISH: "en"}
-_MIN_CONFIDENCE = 0.7
+log = logging.getLogger(__name__)
+
+MODEL_PATH = Path(__file__).parent / "data" / "lid.176.ftz"  # fastText language-ID model, CC BY-SA 3.0
+_MIN_CONFIDENCE = 0.7  # share of the enabled languages' total probability
 _MIN_LENGTH = 12  # shorter texts are too ambiguous for detection
 
 
-def detect_lang(text: str, default: str) -> str:
-    if len(text.strip()) < _MIN_LENGTH:
+@functools.cache
+def _model():
+    """The fastText model, loaded once on first use; None when it cannot be loaded."""
+    try:
+        import fasttext
+
+        return fasttext.load_model(str(MODEL_PATH))
+    except Exception:
+        log.warning("language detector unavailable; using the default language", exc_info=True)
+        return None
+
+
+def detect_lang(text: str, enabled: list[str], default: str) -> str:
+    if len(enabled) == 1:
+        return enabled[0]
+    text = " ".join(text.split())  # fastText rejects newlines
+    if len(text) < _MIN_LENGTH:
         return default
-    language = _DETECTOR.detect_language_of(text)
-    if language is None:
+    model = _model()
+    if model is None:
         return default
-    if _DETECTOR.compute_language_confidence(text, language) < _MIN_CONFIDENCE:
+    labels, probs = model.predict(text, k=-1)
+    scores = {label.removeprefix("__label__"): float(p) for label, p in zip(labels, probs)}
+    scores = {code: scores.get(code, 0.0) for code in enabled}
+    total = sum(scores.values())
+    if total <= 0:
         return default
-    return _CODES[language]
+    best = max(scores, key=scores.get)
+    return best if scores[best] / total >= _MIN_CONFIDENCE else default
 
 
 def spoken_text(msg: Msg, lang: str, announce: bool) -> str:
@@ -27,5 +50,4 @@ def spoken_text(msg: Msg, lang: str, announce: bool) -> str:
     if not announce:
         return msg.text
     name = msg.user.replace("_", " ")
-    verb = "disse" if lang == "pt" else "says"
-    return f"{name} {verb}: {msg.text}"
+    return f"{name} {LANGUAGES[lang].says}: {msg.text}"
