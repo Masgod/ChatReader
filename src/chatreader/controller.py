@@ -1,9 +1,11 @@
 """Wires sources -> filters -> language -> player, and applies config changes live."""
 import logging
 import threading
+from dataclasses import replace
 from typing import Callable
 
 from chatreader.config import Config
+from chatreader.emotes import speak_emotes, strip_emotes
 from chatreader.filters import FilterState, apply, explain
 from chatreader.lang import detect_lang, spoken_text
 from chatreader.models import Msg
@@ -38,9 +40,16 @@ class Controller:
             if msg is None:
                 self._record(original.user, original.text, f"skipped:{reason}" if reason else "skipped")
                 return
-            lang = detect_lang(msg.text, cfg.default_lang)
+            # a message that is only laughs/emotes says nothing about its language
+            lang = detect_lang(msg.text, cfg.languages, cfg.default_lang) if strip_emotes(msg.text) else cfg.default_lang
             voice = self._pick_voice(cfg, msg, lang)
-            self._player.submit(spoken_text(msg, lang, cfg.announce_user), lang, msg.user, voice)
+            spoken = msg
+            if cfg.speak_emotes and msg.kind == "chat":
+                spoken = replace(msg, text=speak_emotes(msg.text, lang))
+                if not spoken.text:
+                    self._record(msg.user, msg.text, "skipped:emotes only")
+                    return
+            self._player.submit(spoken_text(spoken, lang, cfg.announce_user), lang, msg.user, voice)
             self._record(msg.user, msg.text, "queued")
         except Exception:
             log.exception("message dropped")
@@ -80,7 +89,7 @@ class Controller:
                     self._start_source(name)
         self._join(to_join)
         # Slow disk work stays outside the lock so on_msg is never blocked by a voice load.
-        if (new.voice_pt, new.voice_en, new.speed) != (old.voice_pt, old.voice_en, old.speed):
+        if (new.languages, new.voices(), new.speed) != (old.languages, old.voices(), old.speed):
             try:
                 self._tts.reload(new)
             except Exception:
@@ -111,7 +120,7 @@ class Controller:
             "sources": sources,
             "overlay": overlay,
             "model": part(lambda: self._tts.model_state, "error"),
-            "voices": part(lambda: self._tts.voices_ok, {"pt": False, "en": False}),
+            "voices": part(lambda: self._tts.voices_ok, {c: False for c in cfg.languages}),
             "queue": part(lambda: int(self._player.pending), 0),
             "paused": part(lambda: bool(self._player.paused), False),
         }
@@ -129,8 +138,9 @@ class Controller:
     def skip(self) -> None:
         self._player.skip()
 
-    def speak_test(self, text: str) -> None:
-        lang = detect_lang(text, self.cfg.default_lang)
+    def speak_test(self, text: str, lang: str = "") -> None:
+        if lang not in self.cfg.languages:  # unknown or not yet saved: guess from the text
+            lang = detect_lang(text, self.cfg.languages, self.cfg.default_lang)
         self._player.submit(text, lang, "test")
 
     def shutdown(self) -> None:

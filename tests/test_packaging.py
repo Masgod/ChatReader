@@ -40,7 +40,7 @@ def test_notices_list_all_runtime_dependencies():
 
 def test_spec_collects_data_packages():
     spec = (ROOT / "packaging" / "chatreader.spec").read_text("utf-8")
-    for needle in ("kokoro_onnx", "espeakng_loader", "lingua", "pytchat", "web", "console=False", "pystray"):
+    for needle in ("kokoro_onnx", "espeakng_loader", "fasttext", "chatreader/data", "pytchat", "web", "console=False", "pystray"):
         assert needle in spec, needle
 
 

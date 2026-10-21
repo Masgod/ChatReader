@@ -118,26 +118,14 @@
       <summary><h2>Voices</h2></summary>
       <div class="card">
         <div class="row grid">
+          <div><div class="name">Languages</div><div class="hint">Which languages are read aloud</div></div>
+          <div class="field seg wrap" id="lang-checks" role="group" aria-label="Languages"></div>
+        </div>
+        <div class="row grid">
           <div><div class="name">Default language</div><div class="hint">Used when detection is unsure</div></div>
-          <div class="field seg" role="group" aria-label="Default language">
-            <button type="button" data-lang="pt">Português</button>
-            <button type="button" data-lang="en">English</button>
-          </div>
+          <div class="field seg" id="default-lang" role="group" aria-label="Default language"></div>
         </div>
-        <div class="row grid">
-          <label for="voice_pt"><div class="name">Portuguese voice</div><div class="hint">Kokoro voice</div></label>
-          <div class="pick">
-            <div class="field grow" id="wrap-voice_pt"><select id="voice_pt" data-key="voice_pt" data-voice="pt"></select></div>
-            <button type="button" class="btn icon" data-preview="pt" title="Preview the saved Portuguese voice" aria-label="Preview Portuguese voice">▶</button>
-          </div>
-        </div>
-        <div class="row grid">
-          <label for="voice_en"><div class="name">English voice</div><div class="hint">Kokoro voice</div></label>
-          <div class="pick">
-            <div class="field grow" id="wrap-voice_en"><select id="voice_en" data-key="voice_en" data-voice="en"></select></div>
-            <button type="button" class="btn icon" data-preview="en" title="Preview the saved English voice" aria-label="Preview English voice">▶</button>
-          </div>
-        </div>
+        <div id="voice-rows"></div>
         <label class="row grid">
           <div><div class="name">Speed</div><div class="hint" id="speed-val">1.0×</div></div>
           <input type="range" id="speed" data-key="speed" data-type="number" min="0.8" max="1.4" step="0.05" aria-label="Speech speed">
@@ -216,6 +204,10 @@
         <div class="row">
           <div class="txt"><div class="name" id="l-peruser">A different voice for each viewer</div><div class="hint">Picked once per viewer and kept</div></div>
           <button type="button" class="sw" role="switch" id="per_user_voices" aria-labelledby="l-peruser" data-toggle="per_user_voices"></button>
+        </div>
+        <div class="row">
+          <div class="txt"><div class="name" id="l-emotes">Read laughs, skip emotes</div><div class="hint">LUL, KEKW, kkkk become a laugh; Kappa, PogChamp and the like are left out</div></div>
+          <button type="button" class="sw" role="switch" id="speak_emotes" aria-labelledby="l-emotes" data-toggle="speak_emotes"></button>
         </div>
       </div>
     </details>

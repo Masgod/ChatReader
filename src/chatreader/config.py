@@ -5,6 +5,8 @@ from pathlib import Path
 
 import tomli_w
 
+from chatreader.languages import DEFAULT_LANGUAGES, LANGUAGES
+
 ROLE_CHOICES = {"sub", "vip", "mod"}
 EVENT_CHOICES = ["bits", "subs", "gifts", "raids", "superchat", "members"]
 TWITCH_RE = re.compile(r"[a-z0-9_]{3,25}")
@@ -21,6 +23,10 @@ class Config:
     youtube_video_id: str = ""
     voice_pt: str = "pf_dora"
     voice_en: str = "af_heart"
+    voice_es: str = "ef_dora"
+    voice_fr: str = "ff_siwis"
+    voice_it: str = "if_sara"
+    languages: list[str] = field(default_factory=lambda: list(DEFAULT_LANGUAGES))  # languages that are read aloud
     default_lang: str = "pt"
     queue_size: int = 20
     max_chars: int = 200
@@ -39,9 +45,14 @@ class Config:
     youtube_roles: list[str] = field(default_factory=list)
     repeat_seconds: int = 30  # skip the same text from anyone within this many seconds; 0 = off
     per_user_voices: bool = True
+    speak_emotes: bool = True  # laughs like LUL/kkkk are spoken as a laugh, other emotes are left out
     read_events: bool = False  # master switch: events are only read when this is on
     event_kinds: list[str] = field(default_factory=lambda: list(EVENT_CHOICES))  # which events are read aloud
     min_bits: int = 0  # ignore cheers smaller than this
+
+    def voices(self) -> dict[str, str]:
+        """The voice chosen for each enabled language."""
+        return {code: getattr(self, f"voice_{code}") for code in self.languages}
 
 
 def load_config(path: Path) -> Config:
@@ -107,9 +118,9 @@ def validate(cfg: Config) -> list[str]:
         errors.append("max_chars must be >= 1")
     if cfg.repeat_window < 0:
         errors.append("repeat_window must be >= 0")
-    for attr in ("voice_pt", "voice_en"):
-        if not VOICE_NAME_RE.fullmatch(getattr(cfg, attr)):
-            errors.append(f"{attr} must look like pf_dora")
+    for code in LANGUAGES:
+        if not VOICE_NAME_RE.fullmatch(getattr(cfg, f"voice_{code}")):
+            errors.append(f"voice_{code} must look like pf_dora")
     for attr in ("twitch_roles", "youtube_roles"):
         if not set(getattr(cfg, attr)) <= ROLE_CHOICES:
             errors.append(f"{attr} must only contain sub, vip or mod")
@@ -121,6 +132,8 @@ def validate(cfg: Config) -> list[str]:
         errors.append("min_bits must be between 0 and 100000")
     if not 1 <= cfg.port <= 65535:
         errors.append("port must be between 1 and 65535")
-    if cfg.default_lang not in ("pt", "en"):
-        errors.append("default_lang must be 'pt' or 'en'")
+    if not cfg.languages or len(set(cfg.languages)) != len(cfg.languages) or not set(cfg.languages) <= set(LANGUAGES):
+        errors.append("languages must be a non-empty list of unique codes from " + ", ".join(LANGUAGES))
+    elif cfg.default_lang not in cfg.languages:
+        errors.append("default_lang must be one of the enabled languages")
     return errors

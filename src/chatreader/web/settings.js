@@ -1,9 +1,12 @@
 // Settings tab: form state, dirty tracking, save, voice pickers.
 (() => {
   const { $, $$, api } = App;
-  const SAMPLES = { pt: "Olá, este é um teste de voz.", en: "Hello, this is a voice test." };
+  const SAMPLES = {
+    pt: "Olá, este é um teste de voz.", en: "Hello, this is a voice test.", es: "Hola, esta es una prueba de voz.",
+    fr: "Bonjour, ceci est un test de voix.", it: "Ciao, questa è una prova della voce.",
+  };
   let state = null, saved = "", savedPort = null, savedThreads = null, flashTimer = 0;
-  let voices = { pt: [], en: [] };
+  let voices = {}, languages = [];  // languages: [{code, name, beta}] from /api/languages
 
   const snap = () => JSON.stringify(state);
   const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
@@ -25,7 +28,12 @@
     if (!state) return;
     for (const el of $$("[data-key]")) if (document.activeElement !== el) el.value = state[el.dataset.key] ?? "";
     for (const b of $$("[data-toggle]")) b.setAttribute("aria-checked", !!state[b.dataset.toggle]);
-    for (const b of $$("[data-lang]")) b.setAttribute("aria-pressed", state.default_lang === b.dataset.lang);
+    for (const b of $$("[data-lang]")) {
+      b.setAttribute("aria-pressed", state.default_lang === b.dataset.lang);
+      b.hidden = !state.languages.includes(b.dataset.lang);
+    }
+    for (const b of $$("[data-lang-toggle]")) b.setAttribute("aria-pressed", state.languages.includes(b.dataset.langToggle));
+    for (const r of $$("[data-voice-row]")) r.hidden = !state.languages.includes(r.dataset.voiceRow);
     for (const box of $$("[data-num]")) $("input", box).value = state[box.dataset.num];
     for (const g of $$("[data-roles]")) {
       const list = state[g.dataset.roles] || [];
@@ -72,16 +80,56 @@
   }
   $$("[data-key]").forEach(bindKey);
 
+  // --- languages: toggles, default-language buttons and one voice row per supported language (built once) ---
+  function el(tag, cls, text) {
+    const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e;
+  }
+
+  function voiceRow({ code, name }) {
+    const row = el("div", "row grid"); row.dataset.voiceRow = code;
+    const label = el("label"); label.htmlFor = "voice_" + code;
+    label.append(el("div", "name", name + " voice"), el("div", "hint", "Kokoro voice"));
+    const select = el("select"); select.id = "voice_" + code; select.dataset.key = "voice_" + code; select.dataset.voice = code;
+    const wrap = el("div", "field grow"); wrap.id = "wrap-voice_" + code; wrap.append(select); bindKey(select);
+    const play = el("button", "btn icon", "▶"); play.type = "button"; play.dataset.preview = code;
+    play.title = "Preview the saved " + name + " voice"; play.setAttribute("aria-label", "Preview " + name + " voice");
+    play.onclick = () => speak(code);
+    const pick = el("div", "pick"); pick.append(wrap, play);
+    row.append(label, pick);
+    return row;
+  }
+
+  function toggleLang(code) {
+    const on = state.languages.includes(code);
+    if (on && state.languages.length === 1) return;  // at least one language stays on
+    state.languages = languages.map((l) => l.code).filter((c) => (c === code ? !on : state.languages.includes(c)));
+    if (!state.languages.includes(state.default_lang)) state.default_lang = state.languages[0];
+    refresh();
+  }
+
+  function buildLanguages() {
+    const checks = $("#lang-checks"), def = $("#default-lang"), rows = $("#voice-rows");
+    checks.replaceChildren(); def.replaceChildren(); rows.replaceChildren();
+    for (const l of languages) {
+      const toggle = el("button", "", l.name); toggle.type = "button"; toggle.dataset.langToggle = l.code;
+      if (l.beta) toggle.append(el("span", "tag", "beta"));
+      toggle.onclick = () => toggleLang(l.code);
+      const pick = el("button", "", l.name); pick.type = "button"; pick.dataset.lang = l.code;
+      pick.onclick = () => { state.default_lang = l.code; refresh(); };
+      checks.append(toggle); def.append(pick); rows.append(voiceRow(l));
+    }
+  }
+
   // --- voices: a grouped <select> per language, or a plain text box when the list is unavailable ---
   function fillVoices() {
-    for (const lang of ["pt", "en"]) {
-      const wrap = $("#wrap-voice_" + lang), id = "voice_" + lang, list = voices[lang];
+    for (const { code: lang, name } of languages) {
+      const wrap = $("#wrap-voice_" + lang), id = "voice_" + lang, list = voices[lang] || [];
       let el = $("#" + id);
       if (!list.length) {
         if (el.tagName !== "INPUT") {
           const input = document.createElement("input");
           input.type = "text"; input.id = id; input.dataset.key = id; input.dataset.voice = lang;
-          input.autocomplete = "off"; input.spellcheck = false; input.setAttribute("aria-label", lang === "pt" ? "Portuguese voice" : "English voice");
+          input.autocomplete = "off"; input.spellcheck = false; input.setAttribute("aria-label", name + " voice");
           wrap.replaceChildren(input); bindKey(input);
         }
         continue;
@@ -110,7 +158,6 @@
   }
 
   for (const b of $$("[data-toggle]")) b.onclick = () => { state[b.dataset.toggle] = !state[b.dataset.toggle]; refresh(); };
-  for (const b of $$("[data-lang]")) b.onclick = () => { state.default_lang = b.dataset.lang; refresh(); };
   for (const g of $$("[data-roles]")) for (const b of $$("[data-role]", g)) b.onclick = () => {
     const key = g.dataset.roles, role = b.dataset.role, list = state[key];
     state[key] = !role ? [] : list.includes(role) ? list.filter((r) => r !== role) : [...list, role];
@@ -132,13 +179,14 @@
   };
 
   async function speak(lang) {
+    const name = languages.find((l) => l.code === lang).name;
+    if (!JSON.parse(saved).languages.includes(lang)) { flash("Save first, then preview the " + name + " voice"); return; }
     try {
-      await api("/api/test", { body: { text: SAMPLES[lang] } });
-      flash("Playing the saved " + (lang === "pt" ? "Portuguese" : "English") + " voice…");
+      await api("/api/test", { body: { text: SAMPLES[lang], lang } });
+      flash("Playing the saved " + name + " voice…");
     } catch { flash("Test failed", "bad"); }
   }
   $("#btn-test").onclick = () => speak(state.default_lang);
-  for (const b of $$("[data-preview]")) b.onclick = () => speak(b.dataset.preview);
 
   $("#btn-save").onclick = async () => {
     const errors = $("#errors"); errors.replaceChildren();
@@ -173,7 +221,7 @@
   // The Console debug switch can change config behind this form's back; re-read when coming back if nothing is unsaved.
   App.onTab((t) => { if (t === "settings" && state && !dirty()) api("/api/config").then(load).catch(() => {}); });
 
-  Promise.all([api("/api/voices").catch(() => ({ pt: [], en: [] })), api("/api/config")])
-    .then(([v, cfg]) => { voices = { pt: v.pt || [], en: v.en || [] }; load(cfg); })
+  Promise.all([api("/api/voices").catch(() => ({})), api("/api/config"), api("/api/languages")])
+    .then(([v, cfg, langs]) => { voices = v; languages = langs; buildLanguages(); load(cfg); })
     .catch(() => {});
 })();

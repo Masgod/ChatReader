@@ -389,3 +389,37 @@ def test_controller_no_voice_when_disabled_and_for_speak_test():
     c.on_msg(Msg("twitch", "alice", "eu gostei muito dessa jogada ontem", 0.0))
     c.speak_test("hello there")
     assert player.voices == ["", ""]
+
+
+def test_controller_speaks_laughs_and_skips_emote_only_messages():
+    c, player = _voiced(Config(announce_user=False), FakeTTS())
+    c.on_msg(Msg("twitch", "alice", "great play Kappa KEKW", 0.0))
+    c.on_msg(Msg("twitch", "bob", "Kappa", 1.0))
+    assert [t for t, _ in player.submitted] == ["great play ha ha"]
+
+
+def test_controller_leaves_emotes_when_disabled():
+    c, player = _voiced(Config(announce_user=False, speak_emotes=False), FakeTTS())
+    c.on_msg(Msg("twitch", "alice", "Kappa", 0.0))
+    assert [t for t, _ in player.submitted] == ["Kappa"]
+
+
+def test_apply_config_reloads_tts_when_languages_change():
+    c, player, tts, *_ = make()
+    assert not tts.reloaded
+    c.apply_config(replace(c.cfg, languages=["pt", "en", "es"]))
+    assert tts.reloaded
+
+
+def test_laugh_only_message_uses_the_default_language():
+    c, player = _voiced(Config(announce_user=False, default_lang="pt"), FakeTTS())
+    c.on_msg(Msg("twitch", "alice", "kkkkkkkk kkkkkkkk", 0.0))
+    assert [lang for _, lang in player.submitted] == ["pt"]
+
+
+def test_speak_test_uses_the_requested_enabled_language():
+    c, player = _voiced(Config(languages=["pt", "en", "es"]), FakeTTS())
+    c.speak_test("Hello, this is a voice test.", "es")
+    c.speak_test("Hola", "fr")  # not enabled: falls back to detection
+    assert player.submitted[0] == ("Hello, this is a voice test.", "es")
+    assert player.submitted[1][1] in ("pt", "en", "es")

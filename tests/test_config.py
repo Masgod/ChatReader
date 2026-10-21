@@ -1,3 +1,5 @@
+import pytest
+
 from chatreader.config import Config, load_config, normalize, save_config, validate
 
 
@@ -75,3 +77,30 @@ def test_bad_roles_in_toml_load_defaults(tmp_path):
     p.write_text('twitch_roles = ["admin"]\n', encoding="utf-8")
     assert load_config(p) == Config()
     assert (tmp_path / "c.toml.bad").exists()
+
+
+def test_languages_default():
+    c = Config()
+    assert c.languages == ["pt", "en"]
+    assert c.voices() == {"pt": "pf_dora", "en": "af_heart"}
+
+
+@pytest.mark.parametrize("langs", [[], ["xx"], ["pt", "pt"]])
+def test_bad_languages_are_rejected(langs):
+    assert validate(Config(languages=langs))
+
+
+def test_default_lang_must_be_enabled():
+    assert any("default_lang" in e for e in validate(Config(languages=["es"], default_lang="pt")))
+    assert validate(Config(languages=["es"], default_lang="es")) == []
+
+
+def test_old_config_file_loads(tmp_path):
+    p = tmp_path / "config.toml"
+    p.write_text('voice_pt = "pm_alex"\ndefault_lang = "en"\n', encoding="utf-8")
+    c = load_config(p)
+    assert (c.languages, c.voice_pt, c.default_lang) == (["pt", "en"], "pm_alex", "en")
+
+
+def test_voice_names_validated_for_every_language():
+    assert validate(Config(voice_it="../x"))

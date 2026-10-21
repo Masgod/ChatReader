@@ -24,9 +24,13 @@ The file uses the defaults below when a key is missing. Keys that are not known 
 |---|---|---|
 | `twitch_channel` | `""` | Twitch channel name without `#`. Empty disables Twitch. |
 | `youtube_video_id` | `""` | YouTube live video ID or URL (a URL is reduced to the ID). Empty disables YouTube. |
+| `languages` | `["pt", "en"]` | Languages that are read aloud: any of `pt`, `en`, `es`, `fr`, `it` (`es`, `fr` and `it` are beta). At least one; no duplicates. |
 | `voice_pt` | `"pf_dora"` | Kokoro voice for Portuguese messages (`pf_dora`, `pm_alex`, `pm_santa`). |
 | `voice_en` | `"af_heart"` | Kokoro voice for English messages (for example `af_heart`, `af_bella`, `am_michael`). |
-| `default_lang` | `"pt"` | Language used when detection is unsure or the text is under 12 characters. `"pt"` or `"en"`. |
+| `voice_es` | `"ef_dora"` | Kokoro voice for Spanish messages (`ef_dora`, `em_alex`, `em_santa`). |
+| `voice_fr` | `"ff_siwis"` | Kokoro voice for French messages. |
+| `voice_it` | `"if_sara"` | Kokoro voice for Italian messages (`if_sara`, `im_nicola`). |
+| `default_lang` | `"pt"` | Language used when detection is unsure or the text is under 12 characters. Must be one of `languages`. |
 | `queue_size` | `20` | Messages waiting to be spoken. When full, the oldest waiting message is dropped. |
 | `max_chars` | `200` | Longer messages are cut at a word boundary. |
 | `announce_user` | `true` | Say "<user> disse:" or "<user> says:" before the text. |
@@ -40,6 +44,7 @@ The file uses the defaults below when a key is missing. Keys that are not known 
 | `twitch_roles` / `youtube_roles` | `[]` | Who is read on that platform: empty means everyone, otherwise any of `sub`, `vip`, `mod` (the owner is always read). |
 | `repeat_seconds` | `30` | Skip the same text from anyone within this many seconds; `0` turns it off. |
 | `per_user_voices` | `true` | Give each viewer a stable voice picked from the model's voices. |
+| `speak_emotes` | `true` | Read laughs (`LUL`, `KEKW`, `kkkk`, `rsrs`) as a laugh and leave out other emotes (`Kappa`, `:name:`). A message that is only emotes is skipped. |
 | `youtube_channel` | `""` | `@handle` or `UC...` channel ID. When set and `youtube_video_id` is empty, the app waits for the channel's live stream and connects by itself. |
 
 `config.example.toml` lists the same keys with comments. The app does not copy it; it writes the defaults.

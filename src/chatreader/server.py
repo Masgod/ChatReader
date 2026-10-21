@@ -13,6 +13,7 @@ from fastapi import BackgroundTasks, FastAPI, Request, WebSocket, WebSocketDisco
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 from chatreader.config import Config, normalize, same_type, validate
+from chatreader.languages import LANGUAGES
 
 READY_TIMEOUT = 5.0  # seconds run_server waits for uvicorn to start listening
 EXTRA_WAIT = 2.0  # seconds added to the WAV duration before play() gives up
@@ -250,6 +251,10 @@ def create_app(
     def read_voices():
         return unavailable() if voices is None else voices()
 
+    @app.get("/api/languages")
+    def read_languages():
+        return [{"code": lang.code, "name": lang.name, "beta": lang.beta} for lang in LANGUAGES.values()]
+
     @app.get("/api/config")
     def read_config():
         return asdict(get_config())
@@ -275,7 +280,7 @@ def create_app(
     @app.post("/api/test")
     async def test_voice(request: Request):
         body = await request.json()
-        speak_test(str(body.get("text", "")))
+        speak_test(str(body.get("text", "")), str(body.get("lang", "")))
         return {"ok": True}
 
     @app.websocket("/ws")

@@ -5,11 +5,14 @@ from pathlib import Path
 from PyInstaller.utils.hooks import collect_all
 
 root = Path(SPECPATH).parent
-datas, binaries, hiddenimports = [(str(root / "src" / "chatreader" / "web"), "chatreader/web")], [], [
+datas, binaries, hiddenimports = [
+    (str(root / "src" / "chatreader" / "web"), "chatreader/web"),
+    (str(root / "src" / "chatreader" / "data"), "chatreader/data"),  # fastText language-ID model
+], [], [
     "uvicorn.logging", "uvicorn.loops.auto", "uvicorn.protocols.http.auto",
-    "uvicorn.protocols.websockets.auto", "uvicorn.lifespan.on", "pystray._win32",
+    "uvicorn.protocols.websockets.auto", "uvicorn.lifespan.on", "pystray._win32", "fasttext_pybind",
 ]
-for pkg in ("kokoro_onnx", "espeakng_loader", "lingua", "pytchat"):
+for pkg in ("kokoro_onnx", "espeakng_loader", "fasttext", "pytchat"):
     d, b, h = collect_all(pkg)
     datas += d
     binaries += b

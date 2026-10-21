@@ -44,6 +44,6 @@ The app lives in the system tray (purple circle icon). Set `CHATREADER_HOME` to 
 
 1. The Twitch source (anonymous IRC over WebSocket) and the YouTube source (`pytchat`) each run in a thread. Each reconnects with backoff, from 1 s up to 30 s.
 2. Filters drop bots and ignored users, `!commands`, links, repeats, and spam (a run of 10 or more identical characters, or one token making up 60% or more of a message of four or more tokens). The rest is truncated to `max_chars`.
-3. `lingua` picks Portuguese or English (confidence at least 0.7, otherwise `default_lang`). The text becomes "<user> disse: ..." or "<user> says: ...".
+3. a small fastText model picks the language among the enabled `languages` (confidence at least 0.7, otherwise `default_lang`). The text becomes "<user> disse: ..." or "<user> says: ...".
 4. A bounded queue feeds one worker thread, which synthesizes the text with Kokoro on the CPU (2 threads).
 5. The WAV goes to the overlay over a local WebSocket. The overlay plays it and replies `done`. The worker waits for that reply (clip length plus 2 s) before the next clip, so lines never overlap.
