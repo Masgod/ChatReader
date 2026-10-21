@@ -7,11 +7,11 @@ from pathlib import Path
 import numpy as np
 
 from chatreader.config import VOICE_NAME_RE, Config
+from chatreader.languages import LANGUAGES
 
 RELEASE = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0"
 MODEL_FILE = "kokoro-v1.0.int8.onnx"  # int8: ~92 MB, noticeably lighter on CPU than the fp32 model
 VOICES_FILE = "voices-v1.0.bin"
-LANG_CODE = {"pt": "pt-br", "en": "en-us"}
 
 
 def _download(url: str, dest: Path) -> None:
@@ -64,7 +64,7 @@ class KokoroTTS:
         self._voice = {}
         self._threads = cfg.cpu_threads  # read once: changing it needs a restart
         self._speed = cfg.speed
-        self._voices_ok = {"pt": False, "en": False}
+        self._voices_ok = {code: False for code in cfg.languages}
         self._known: set[str] = set()
         self.model_state = "missing"  # missing | loading | ready | error
         self.reload(cfg)
@@ -74,14 +74,14 @@ class KokoroTTS:
         return dict(self._voices_ok)
 
     def voices(self) -> dict[str, list[dict]]:
-        """Voices the loaded model offers, grouped by language; empty until the model is loaded."""
-        out: dict[str, list[dict]] = {"pt": [], "en": []}
+        """Voices the loaded model offers for every supported language; empty until the model is loaded."""
+        out: dict[str, list[dict]] = {code: [] for code in LANGUAGES}
         if self._kokoro is None:
             return out
         for name in sorted(self._kokoro.get_voices()):
             if not VOICE_NAME_RE.fullmatch(name) or len(name) < 4 or name[2] != "_":
                 continue
-            lang = {"p": "pt", "a": "en", "b": "en"}.get(name[0])
+            lang = next((c for c, language in LANGUAGES.items() if name[0] in language.voice_prefixes), None)
             gender = {"f": "female", "m": "male"}.get(name[1])
             if lang and gender:
                 out[lang].append({"id": name, "label": f"{name[3:].title()} ({gender})"})
@@ -104,8 +104,8 @@ class KokoroTTS:
         self._speed = cfg.speed
         known = self._known = set(self._kokoro.get_voices())
         chosen = {}
-        self._voices_ok = {"pt": False, "en": False}
-        for lang, name in (("pt", cfg.voice_pt), ("en", cfg.voice_en)):
+        self._voices_ok = {code: False for code in cfg.languages}
+        for lang, name in cfg.voices().items():
             if not VOICE_NAME_RE.fullmatch(name) or name not in known:
                 self._warn(f"unknown voice {name!r}, skipped")
             else:
@@ -122,7 +122,7 @@ class KokoroTTS:
             raise RuntimeError(f"no voice configured for {lang!r}")
         if requested and VOICE_NAME_RE.fullmatch(requested) and requested in self._known:
             name = requested  # per-viewer voice; anything unknown falls back to the configured one
-        samples, rate = kokoro.create(text, voice=name, speed=self._speed, lang=LANG_CODE[lang])
+        samples, rate = kokoro.create(text, voice=name, speed=self._speed, lang=LANGUAGES[lang].kokoro)
         buf = io.BytesIO()
         with wave.open(buf, "wb") as w:
             w.setnchannels(1)

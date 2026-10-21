@@ -402,3 +402,10 @@ def test_controller_leaves_emotes_when_disabled():
     c, player = _voiced(Config(announce_user=False, speak_emotes=False), FakeTTS())
     c.on_msg(Msg("twitch", "alice", "Kappa", 0.0))
     assert [t for t, _ in player.submitted] == ["Kappa"]
+
+
+def test_apply_config_reloads_tts_when_languages_change():
+    c, player, tts, *_ = make()
+    assert not tts.reloaded
+    c.apply_config(replace(c.cfg, languages=["pt", "en", "es"]))
+    assert tts.reloaded

@@ -141,12 +141,13 @@ def test_voices_grouped_and_labelled(tmp_path):
     assert tts.voices() == {
         "pt": [{"id": "pf_dora", "label": "Dora (female)"}, {"id": "pm_alex", "label": "Alex (male)"}],
         "en": [{"id": "af_heart", "label": "Heart (female)"}, {"id": "bm_george", "label": "George (male)"}],
+        "es": [], "fr": [], "it": [],
     }
 
 
 def test_voices_empty_when_model_missing(tmp_path):
     tts = KokoroTTS(tmp_path, Config(), lambda m: None, loader=lambda m, v, t: FakeKokoro())
-    assert tts.voices() == {"pt": [], "en": []}
+    assert tts.voices() == {"pt": [], "en": [], "es": [], "fr": [], "it": []}
 
 
 def _ready(tmp_path, fake):
@@ -178,3 +179,29 @@ def test_invalid_default_voice_still_means_language_not_spoken(tmp_path):
     tts = KokoroTTS(tmp_path, Config(voice_pt="zz_nope"), lambda m: None, loader=lambda m, v, t: FakeKokoro())
     with pytest.raises(RuntimeError):
         tts.synth("oi", "pt", "pf_dora")  # a per-viewer voice must not bypass the broken default
+
+
+def test_synth_uses_language_code(tmp_path):
+    _files(tmp_path)
+    fake = FakeKokoro()
+    fake.get_voices = lambda: ["ef_dora", "af_heart"]
+    tts = KokoroTTS(tmp_path, Config(languages=["es", "en"], default_lang="es"), lambda m: None, loader=lambda m, v, t: fake)
+    tts.synth("hola", "es")
+    assert fake.calls == [("hola", "ef_dora", "es")]
+
+
+def test_disabled_language_voice_is_not_validated(tmp_path):
+    _files(tmp_path)
+    warnings = []
+    cfg = Config(languages=["en"], default_lang="en", voice_pt="zz_nope")
+    tts = KokoroTTS(tmp_path, cfg, warnings.append, loader=lambda m, v, t: FakeKokoro())
+    assert warnings == [] and tts.voices_ok == {"en": True}
+
+
+def test_voices_grouped_by_language_prefix(tmp_path):
+    _files(tmp_path)
+    fake = FakeKokoro()
+    fake.get_voices = lambda: ["pf_dora", "ef_dora", "ff_siwis", "if_sara", "bm_george"]
+    tts = KokoroTTS(tmp_path, Config(), lambda m: None, loader=lambda m, v, t: fake)
+    got = {code: [v["id"] for v in voices] for code, voices in tts.voices().items()}
+    assert got == {"pt": ["pf_dora"], "en": ["bm_george"], "es": ["ef_dora"], "fr": ["ff_siwis"], "it": ["if_sara"]}

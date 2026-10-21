@@ -88,7 +88,7 @@ class Controller:
                     self._start_source(name)
         self._join(to_join)
         # Slow disk work stays outside the lock so on_msg is never blocked by a voice load.
-        if (new.voice_pt, new.voice_en, new.speed) != (old.voice_pt, old.voice_en, old.speed):
+        if (new.languages, new.voices(), new.speed) != (old.languages, old.voices(), old.speed):
             try:
                 self._tts.reload(new)
             except Exception:
@@ -119,7 +119,7 @@ class Controller:
             "sources": sources,
             "overlay": overlay,
             "model": part(lambda: self._tts.model_state, "error"),
-            "voices": part(lambda: self._tts.voices_ok, {"pt": False, "en": False}),
+            "voices": part(lambda: self._tts.voices_ok, {c: False for c in cfg.languages}),
             "queue": part(lambda: int(self._player.pending), 0),
             "paused": part(lambda: bool(self._player.paused), False),
         }
