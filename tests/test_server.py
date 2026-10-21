@@ -344,7 +344,7 @@ def test_console_panel_has_controls(env):
 def test_settings_panel_has_fields(env):
     client, *_ = env
     body = client.get("/").text
-    _ids(body, ("voice_pt", "voice_en", "speed", "cpu_threads", "youtube_channel", "twitch_channel",
+    _ids(body, ("lang-checks", "default-lang", "voice-rows", "speed", "cpu_threads", "youtube_channel", "twitch_channel",
                 "youtube_video_id", "queue_size", "max_chars", "repeat_window", "port", "btn-save", "btn-test",
                 "checklist", "chk-model", "chk-source", "chk-overlay"))
     assert 'src="/static/settings.js"' in body
@@ -506,3 +506,25 @@ def test_page_icon_is_served_and_linked():
     r = c.get("/static/icon.svg")
     assert r.status_code == 200 and r.headers["content-type"].startswith("image/svg+xml") and b"<svg" in r.content
     assert 'rel="icon" href="/static/icon.svg"' in c.get("/").text
+
+
+def test_languages_endpoint(env):
+    client, *_ = env
+    langs = client.get("/api/languages").json()
+    assert [x["code"] for x in langs] == ["pt", "en", "es", "fr", "it"]
+    assert langs[0] == {"code": "pt", "name": "Português", "beta": False}
+    assert {x["code"] for x in langs if x["beta"]} == {"es", "fr", "it"}
+
+
+def test_config_accepts_languages_and_voices(env):
+    client, _, applied, _ = env
+    body = {**asdict(Config()), "languages": ["pt", "es"], "default_lang": "es", "voice_es": "ef_dora"}
+    assert client.put("/api/config", json=body).status_code == 200
+    assert (applied[0].languages, applied[0].default_lang, applied[0].voice_es) == (["pt", "es"], "es", "ef_dora")
+
+
+def test_put_rejects_default_lang_not_enabled(env):
+    client, _, applied, _ = env
+    body = {**asdict(Config()), "languages": ["pt", "en"], "default_lang": "es"}
+    r = client.put("/api/config", json=body)
+    assert r.status_code == 422 and applied == []
