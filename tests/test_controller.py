@@ -409,3 +409,17 @@ def test_apply_config_reloads_tts_when_languages_change():
     assert not tts.reloaded
     c.apply_config(replace(c.cfg, languages=["pt", "en", "es"]))
     assert tts.reloaded
+
+
+def test_laugh_only_message_uses_the_default_language():
+    c, player = _voiced(Config(announce_user=False, default_lang="pt"), FakeTTS())
+    c.on_msg(Msg("twitch", "alice", "kkkkkkkk kkkkkkkk", 0.0))
+    assert [lang for _, lang in player.submitted] == ["pt"]
+
+
+def test_speak_test_uses_the_requested_enabled_language():
+    c, player = _voiced(Config(languages=["pt", "en", "es"]), FakeTTS())
+    c.speak_test("Hello, this is a voice test.", "es")
+    c.speak_test("Hola", "fr")  # not enabled: falls back to detection
+    assert player.submitted[0] == ("Hello, this is a voice test.", "es")
+    assert player.submitted[1][1] in ("pt", "en", "es")

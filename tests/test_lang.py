@@ -56,3 +56,8 @@ def test_spoken_text_announce():
 def test_username_underscores_become_spaces():
     assert spoken_text(Msg("twitch", "xX_Gamer_Xx", "oi", 0), "pt", True) == "xX Gamer Xx disse: oi"
     assert spoken_text(Msg("twitch", "João", "oi", 0), "pt", True) == "João disse: oi"
+
+
+@pytest.mark.parametrize("text", ["12345678901234", "!!!!!!!!!!!!!!!!!", "😀" * 13])
+def test_text_without_letters_uses_default(text):
+    assert detect_lang(text, ["pt", "en"], "pt") == "pt"

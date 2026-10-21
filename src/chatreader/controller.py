@@ -5,7 +5,7 @@ from dataclasses import replace
 from typing import Callable
 
 from chatreader.config import Config
-from chatreader.emotes import speak_emotes
+from chatreader.emotes import speak_emotes, strip_emotes
 from chatreader.filters import FilterState, apply, explain
 from chatreader.lang import detect_lang, spoken_text
 from chatreader.models import Msg
@@ -40,7 +40,8 @@ class Controller:
             if msg is None:
                 self._record(original.user, original.text, f"skipped:{reason}" if reason else "skipped")
                 return
-            lang = detect_lang(msg.text, cfg.languages, cfg.default_lang)
+            # a message that is only laughs/emotes says nothing about its language
+            lang = detect_lang(msg.text, cfg.languages, cfg.default_lang) if strip_emotes(msg.text) else cfg.default_lang
             voice = self._pick_voice(cfg, msg, lang)
             spoken = msg
             if cfg.speak_emotes and msg.kind == "chat":
@@ -137,8 +138,9 @@ class Controller:
     def skip(self) -> None:
         self._player.skip()
 
-    def speak_test(self, text: str) -> None:
-        lang = detect_lang(text, self.cfg.languages, self.cfg.default_lang)
+    def speak_test(self, text: str, lang: str = "") -> None:
+        if lang not in self.cfg.languages:  # unknown or not yet saved: guess from the text
+            lang = detect_lang(text, self.cfg.languages, self.cfg.default_lang)
         self._player.submit(text, lang, "test")
 
     def shutdown(self) -> None:

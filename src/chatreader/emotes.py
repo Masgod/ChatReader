@@ -16,6 +16,11 @@ _EMOTE_RE = re.compile(
 )
 
 
+def strip_emotes(text: str) -> str:
+    """The text without laughs and emotes, for language detection."""
+    return " ".join(_EMOTE_RE.sub(" ", _LAUGH_RE.sub(" ", text)).split())
+
+
 def speak_emotes(text: str, lang: str) -> str:
     text = _LAUGH_RE.sub(LANGUAGES[lang].laugh, text)
     text = _EMOTE_RE.sub(" ", text)

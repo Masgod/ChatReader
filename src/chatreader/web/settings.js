@@ -179,9 +179,11 @@
   };
 
   async function speak(lang) {
+    const name = languages.find((l) => l.code === lang).name;
+    if (!JSON.parse(saved).languages.includes(lang)) { flash("Save first, then preview the " + name + " voice"); return; }
     try {
-      await api("/api/test", { body: { text: SAMPLES[lang] } });
-      flash("Playing the saved " + languages.find((l) => l.code === lang).name + " voice…");
+      await api("/api/test", { body: { text: SAMPLES[lang], lang } });
+      flash("Playing the saved " + name + " voice…");
     } catch { flash("Test failed", "bad"); }
   }
   $("#btn-test").onclick = () => speak(state.default_lang);

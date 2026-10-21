@@ -29,7 +29,7 @@ def detect_lang(text: str, enabled: list[str], default: str) -> str:
     if len(enabled) == 1:
         return enabled[0]
     text = " ".join(text.split())  # fastText rejects newlines
-    if len(text) < _MIN_LENGTH:
+    if len(text) < _MIN_LENGTH or not any(c.isalpha() for c in text):
         return default
     model = _model()
     if model is None:

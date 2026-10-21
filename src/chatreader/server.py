@@ -280,7 +280,7 @@ def create_app(
     @app.post("/api/test")
     async def test_voice(request: Request):
         body = await request.json()
-        speak_test(str(body.get("text", "")))
+        speak_test(str(body.get("text", "")), str(body.get("lang", "")))
         return {"ok": True}
 
     @app.websocket("/ws")

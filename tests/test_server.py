@@ -39,7 +39,7 @@ def env():
     applied, spoken = [], []
     hub = Hub()
     hub.actions = []
-    app = create_app(lambda: Config(), applied.append, hub, spoken.append, lambda: {"queue": 3}, hub.actions.append)
+    app = create_app(lambda: Config(), applied.append, hub, lambda t, lang="": spoken.append((t, lang)), lambda: {"queue": 3}, hub.actions.append)
     with TestClient(app, base_url="http://127.0.0.1") as client:
         yield client, hub, applied, spoken
 
@@ -170,7 +170,7 @@ def test_hub_disconnect_clears_connected(env):
 def test_post_test_calls_speak_test(env):
     client, _, _, spoken = env
     assert client.post("/api/test", json={"text": "hello"}).status_code == 200
-    assert spoken == ["hello"]
+    assert spoken == [("hello", "")]
 
 
 def test_stale_done_does_not_release_next_play(env):
@@ -528,3 +528,9 @@ def test_put_rejects_default_lang_not_enabled(env):
     body = {**asdict(Config()), "languages": ["pt", "en"], "default_lang": "es"}
     r = client.put("/api/config", json=body)
     assert r.status_code == 422 and applied == []
+
+
+def test_post_test_passes_the_language(env):
+    client, _, _, spoken = env
+    assert client.post("/api/test", json={"text": "hola", "lang": "es"}).status_code == 200
+    assert spoken == [("hola", "es")]

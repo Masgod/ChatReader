@@ -32,6 +32,7 @@ Language-identification model bundled in the zip
 ------------------------------------------------
 lid.176.ftz (fastText language identification), CC BY-SA 3.0, Facebook AI Research
   https://fasttext.cc/docs/en/language-identification.html
+  Licence: https://creativecommons.org/licenses/by-sa/3.0/
 Unmodified; it is only read by ChatReader to guess the language of a chat message.
 
 GPL components (important)
