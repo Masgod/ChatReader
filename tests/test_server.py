@@ -542,6 +542,7 @@ def test_settings_page_has_the_overlay_section(env):
     assert 'data-key="overlay_theme"' in html and 'id="test-bubble"' in html
     assert html.count('data-choice="overlay_position"') == 6
     assert 'data-num="overlay_max_bubbles"' in html and 'data-num="overlay_hold_seconds"' in html
+    assert 'data-num="overlay_scale"' in html
 
 
 def test_settings_script_never_uses_innerhtml():
@@ -593,7 +594,7 @@ def test_api_overlay_returns_the_selected_theme_and_config(tmp_path):
         body = c.get("/api/overlay").json()
         assert body["warning"] is None and body["theme"]["name"] == "Mine"
         assert body["theme"]["heroes"][0]["images"]["happy"] == "/themes/mine/heroes/wraith/happy.png"
-        assert body["config"] == {"overlay_theme": "mine", "overlay_position": "bottom-left", "overlay_max_bubbles": 4, "overlay_hold_seconds": 4}
+        assert body["config"] == {"overlay_theme": "mine", "overlay_position": "bottom-left", "overlay_max_bubbles": 4, "overlay_hold_seconds": 4, "overlay_scale": 100}
 
 
 @pytest.mark.parametrize("theme", ["ghost", "broken"])

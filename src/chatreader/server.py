@@ -255,7 +255,7 @@ def create_app(
         except themes.ThemeError as e:
             theme = themes.load_named(None, themes.DEFAULT)
             warning = f"Theme '{cfg.overlay_theme}' can't be used ({e}); showing the default theme."
-        keys = ("overlay_theme", "overlay_position", "overlay_max_bubbles", "overlay_hold_seconds")
+        keys = ("overlay_theme", "overlay_position", "overlay_max_bubbles", "overlay_hold_seconds", "overlay_scale")
         return {"config": {k: getattr(cfg, k) for k in keys}, "theme": theme, "warning": warning}
 
     @app.get("/overlay")

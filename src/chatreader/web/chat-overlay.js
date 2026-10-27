@@ -46,6 +46,9 @@ function applyTheme() {
   s.setProperty("--radius", theme.bubble.radius + "px");
   s.setProperty("--ev-bg", theme.events.background);
   s.setProperty("--ev-fg", theme.events.color);
+  s.setProperty("--pw", theme.bubble.portrait.width + "px");
+  s.setProperty("--ph", theme.bubble.portrait.height + "px");
+  s.setProperty("--s", config.overlay_scale / 100);
   if (theme.font && theme.font !== fontUrl) {
     fontUrl = theme.font;
     new FontFace("ThemeFont", "url(" + JSON.stringify(theme.font) + ")").load().then((f) => {

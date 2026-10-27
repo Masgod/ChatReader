@@ -53,6 +53,13 @@ def _color(table: dict, key: str, default: str, where: str) -> str:
     return v
 
 
+def _size(table: dict, key: str, default: int) -> int:
+    v = table.get(key, default)
+    if type(v) is not int or not 16 <= v <= 320:
+        raise ThemeError(f"bubble.{key} must be a whole number of pixels from 16 to 320")
+    return v
+
+
 def _table(data: dict, key: str) -> dict:
     v = data.get(key, {})
     if not isinstance(v, dict):
@@ -127,6 +134,8 @@ def load_theme(folder: Path, name: str) -> dict:
     layout = bubble.get("layout", "side")
     if layout not in LAYOUTS:
         raise ThemeError("bubble.layout must be one of " + ", ".join(LAYOUTS))
+    side = 96 if layout == "top" else 56
+    portrait = {"width": _size(bubble, "portrait_width", side), "height": _size(bubble, "portrait_height", side)}
     radius = bubble.get("radius", 12)
     if type(radius) is not int or not 0 <= radius <= 40:
         raise ThemeError("bubble.radius must be a whole number from 0 to 40")
@@ -158,6 +167,7 @@ def load_theme(folder: Path, name: str) -> dict:
             "radius": radius,
             "animation": animation,
             "layout": layout,
+            "portrait": portrait,
         },
         "events": {
             "background": _color(events, "background", "#4b2a86", "events"),

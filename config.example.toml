@@ -65,3 +65,5 @@ overlay_position = "bottom-left"
 # Bubbles on screen at once (1-10) and seconds they stay after the voice ends (0-30).
 overlay_max_bubbles = 4
 overlay_hold_seconds = 4
+# Size of everything in the overlay, in percent (50-200).
+overlay_scale = 100

@@ -51,7 +51,8 @@ def test_valid_theme_loads_with_sorted_heroes_and_urls(tmp_path):
     assert [h["name"] for h in t["heroes"]] == ["abrams", "wraith"]
     assert t["heroes"][0]["images"]["happy"] == "/themes/heroes_theme/heroes/abrams/happy.png"
     assert t["font"] == "/themes/heroes_theme/fonts/f.woff2"
-    assert t["bubble"] == {"background": "#112233", "color": "#fff", "radius": 8, "animation": "fade", "layout": "side"}
+    assert t["bubble"] == {"background": "#112233", "color": "#fff", "radius": 8, "animation": "fade", "layout": "side",
+                         "portrait": {"width": 56, "height": 56}}
     assert t["fallback"] == "neutral" and [e["name"] for e in t["expressions"]] == ["happy", "neutral"]
 
 
@@ -65,6 +66,26 @@ def test_bubble_layout_defaults_to_side_and_accepts_top(tmp_path):
 def test_bubble_layout_rejects_other_values(tmp_path, value):
     with pytest.raises(ThemeError, match="layout"):
         load_theme(make(tmp_path, f"[bubble]\nlayout = {value}", heroes=()), "heroes_theme")
+
+
+def test_portrait_size_defaults_follow_the_layout(tmp_path):
+    assert load_named(None, "default")["bubble"]["portrait"] == {"width": 56, "height": 56}
+    top = load_theme(make(tmp_path, '[bubble]\nlayout = "top"', heroes=()), "heroes_theme")
+    assert top["bubble"]["portrait"] == {"width": 96, "height": 96}
+
+
+def test_portrait_size_can_be_set_by_the_theme(tmp_path):
+    t = load_theme(make(tmp_path, "[bubble]\nportrait_width = 120\nportrait_height = 160", heroes=()), "heroes_theme")
+    assert t["bubble"]["portrait"] == {"width": 120, "height": 160}
+
+
+@pytest.mark.parametrize("key,value", [
+    ("portrait_width", 15), ("portrait_width", 321), ("portrait_height", 0), ("portrait_height", 999),
+    ("portrait_width", '"big"'), ("portrait_height", 80.5), ("portrait_width", "true"),
+])
+def test_portrait_size_out_of_range_or_wrong_type_is_rejected(tmp_path, key, value):
+    with pytest.raises(ThemeError, match=key):
+        load_theme(make(tmp_path, f"[bubble]\n{key} = {value}", heroes=()), "heroes_theme")
 
 
 def test_builtin_default_is_valid_and_has_no_heroes():
