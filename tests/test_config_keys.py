@@ -50,6 +50,13 @@ def test_overlay_scale_defaults_to_100_for_an_old_config_file(tmp_path):
     assert load_config(path).overlay_scale == 100
 
 
+@pytest.mark.parametrize("base,cap,ok", [(10, 300, True), (0, 0, True), (300, 10, False), (-1, 10, False), (1, 3601, False)])
+@pytest.mark.parametrize("kind", ["cooldown", "global"])
+def test_random_wait_bounds(kind, base, cap, ok):
+    cfg = Config(**{f"random_{kind}_base": base, f"random_{kind}_max": cap})
+    assert (validate(cfg) == []) is ok
+
+
 @pytest.mark.parametrize("v,ok", [("bottom-left", True), ("top-right", True), ("middle-left", True), ("center", False), ("", False)])
 def test_overlay_position_choices(v, ok):
     assert (validate(Config(overlay_position=v)) == []) is ok

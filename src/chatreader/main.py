@@ -10,6 +10,7 @@ from chatreader import restart, startup, tray
 from chatreader.config import Config, load_config, save_config
 from chatreader.controller import Controller
 from chatreader.events import EventLog, LogMirror
+from chatreader.heroes import HeroPicker
 from chatreader.paths import app_dir, ensure_streams, stdio_stream
 from chatreader.player import Player
 from chatreader.server import Hub, ViewHub, create_app, run_server
@@ -108,7 +109,7 @@ def main(home: str | None = None) -> None:
     tts = KokoroTTS(voices, cfg, on_warning=lambda m: (log.warning(m), notify(m)))
     events = EventLog()
     logging.getLogger().addHandler(LogMirror(events))
-    controller = Controller(cfg, None, tts, {"twitch": run_twitch, "youtube": run_youtube}, events)
+    controller = Controller(cfg, None, tts, {"twitch": run_twitch, "youtube": run_youtube}, events, HeroPicker(app / "viewer_heroes.json"))
     view = ViewHub()
 
     def on_item_event(item, outcome: str) -> None:

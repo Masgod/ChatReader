@@ -449,3 +449,40 @@ def test_speak_test_uses_the_requested_enabled_language():
     c.speak_test("Hola", "fr")  # not enabled: falls back to detection
     assert player.submitted[0] == ("Hello, this is a voice test.", "es")
     assert player.submitted[1][1] in ("pt", "en", "es")
+
+
+def _with_heroes(tmp_path):
+    from chatreader.heroes import HeroPicker
+
+    cfg = Config(twitch_channel="chan", youtube_video_id="")
+    player, events = FakePlayer(), EventLog()
+    heroes = HeroPicker(tmp_path / "h.json", rng=lambda bits: 4242)
+    c = Controller(cfg, player, FakeTTS(), {"twitch": FakeSource(), "youtube": FakeSource()}, events, heroes)
+    return c, player, events
+
+
+def _outcome_names(events):
+    return [e["outcome"] for e in events.since()["events"]]
+
+
+def test_random_command_rerolls_the_hero_and_is_not_read(tmp_path):
+    c, player, events = _with_heroes(tmp_path)
+    c.on_msg(Msg("twitch", "Alice", "!random", 0.0))
+    assert player.submitted == []
+    c.on_msg(Msg("twitch", "alice", "eu gostei muito dessa jogada", 1.0))
+    assert player.views[-1]["slot"] == 4242
+    assert _outcome_names(events)[0] == "command:random"
+
+
+def test_random_command_on_cooldown_is_dropped_quietly(tmp_path):
+    c, player, events = _with_heroes(tmp_path)
+    c.on_msg(Msg("twitch", "alice", "!random", 0.0))
+    c.on_msg(Msg("twitch", "alice", "!random", 1.0))
+    assert player.submitted == []
+    assert _outcome_names(events) == ["command:random", "skipped:command"]
+
+
+def test_other_commands_stay_dropped_with_heroes_enabled(tmp_path):
+    c, player, _ = _with_heroes(tmp_path)
+    c.on_msg(Msg("twitch", "bob", "!command", 0.0))
+    assert player.submitted == []

@@ -51,6 +51,8 @@ The file uses the defaults below when a key is missing. Keys that are not known 
 | `overlay_max_bubbles` | `4` | Bubbles on screen at once, 1 to 10. |
 | `overlay_hold_seconds` | `4` | Seconds a bubble stays after its voice ends, 0 to 30. |
 | `overlay_scale` | `100` | Size of everything in the chat overlay (bubble, portrait, text) in percent, 50 to 200. |
+| `random_cooldown_base` / `random_cooldown_max` | `10` / `300` | Seconds a viewer waits after `!random`; doubles on each use in a row (up to the max), resets after a quiet minute. `base` must not exceed `max`; `max` is at most 3600. |
+| `random_global_base` / `random_global_max` | `2` / `60` | The same wait, shared by the whole chat. |
 
 `config.example.toml` lists the same keys with comments. The app does not copy it; it writes the defaults.
 

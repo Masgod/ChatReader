@@ -19,8 +19,9 @@ _JOIN_TIMEOUT = 1.0
 
 
 class Controller:
-    def __init__(self, cfg: Config, player, tts, source_factories: dict[str, Callable], events=None):
+    def __init__(self, cfg: Config, player, tts, source_factories: dict[str, Callable], events=None, heroes=None):
         self.cfg = cfg
+        self._heroes = heroes  # optional HeroPicker; enables the !random chat command
         self._player = player
         self._tts = tts
         self._factories = source_factories
@@ -38,6 +39,10 @@ class Controller:
                 original = msg
                 msg = apply(msg, cfg, self._filter_state)
             if msg is None:
+                if reason == "command" and self._heroes and original.text.strip().lower() == "!random":
+                    done = self._heroes.reroll(original.platform, original.user, cfg) is not None
+                    self._record(original.user, original.text, "command:random" if done else "skipped:command")
+                    return
                 self._record(original.user, original.text, f"skipped:{reason}" if reason else "skipped")
                 return
             # a message that is only laughs/emotes says nothing about its language
@@ -50,11 +55,14 @@ class Controller:
                     self._record(msg.user, msg.text, "skipped:emotes only")
                     return
             view = {"platform": msg.platform, "user": msg.user, "text": msg.text, "kind": msg.kind,
-                    "detail": msg.detail, "slot": slot_for(msg.platform, msg.user), "lang": lang}
+                    "detail": msg.detail, "slot": self._slot(msg), "lang": lang}
             self._player.submit(spoken_text(spoken, lang, cfg.announce_user), lang, msg.user, voice, view)
             self._record(msg.user, msg.text, "queued")
         except Exception:
             log.exception("message dropped")
+
+    def _slot(self, msg: Msg) -> int:
+        return self._heroes.slot(msg.platform, msg.user) if self._heroes else slot_for(msg.platform, msg.user)
 
     def _pick_voice(self, cfg: Config, msg: Msg, lang: str) -> str:
         if not cfg.per_user_voices:

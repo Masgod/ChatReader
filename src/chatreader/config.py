@@ -56,6 +56,10 @@ class Config:
     overlay_max_bubbles: int = 4  # bubbles on screen at once
     overlay_hold_seconds: int = 4  # how long a bubble stays after its voice ends
     overlay_scale: int = 100  # size of everything in the chat overlay, in percent
+    random_cooldown_base: int = 10  # seconds a viewer waits after !random; doubles while used in a row
+    random_cooldown_max: int = 300
+    random_global_base: int = 2  # same idea for the whole chat
+    random_global_max: int = 60
 
     def voices(self) -> dict[str, str]:
         """The voice chosen for each enabled language."""
@@ -147,6 +151,10 @@ def validate(cfg: Config) -> list[str]:
         errors.append("overlay_hold_seconds must be between 0 and 30")
     if not 50 <= cfg.overlay_scale <= 200:
         errors.append("overlay_scale must be between 50 and 200")
+    for kind in ("cooldown", "global"):
+        base, cap = getattr(cfg, f"random_{kind}_base"), getattr(cfg, f"random_{kind}_max")
+        if not 0 <= base <= cap <= 3600:
+            errors.append(f"random_{kind}_base must be between 0 and random_{kind}_max, and random_{kind}_max at most 3600")
     if not 1 <= cfg.port <= 65535:
         errors.append("port must be between 1 and 65535")
     if not cfg.languages or len(set(cfg.languages)) != len(cfg.languages) or not set(cfg.languages) <= set(LANGUAGES):
