@@ -127,7 +127,7 @@ def load_theme(folder: Path, name: str) -> dict:
     except OSError:
         raise ThemeError("theme.toml can't be read") from None
     root = folder.resolve()
-    bubble, events = _table(data, "bubble"), _table(data, "events")
+    bubble, events, sender = _table(data, "bubble"), _table(data, "events"), _table(data, "sender")
     animation = bubble.get("animation", "slide")
     if animation not in ANIMATIONS:
         raise ThemeError("bubble.animation must be one of " + ", ".join(ANIMATIONS))
@@ -172,6 +172,10 @@ def load_theme(folder: Path, name: str) -> dict:
         "events": {
             "background": _color(events, "background", "#4b2a86", "events"),
             "color": _color(events, "color", "#ffffff", "events"),
+        },
+        "sender": {  # the viewer's name, drawn beside the portrait in the "top" layout
+            "color": _color(sender, "color", "#ffffff", "sender"),
+            "outline": _color(sender, "outline", "#000000", "sender"),
         },
         "heroes": _heroes(folder, root, name),
         "expressions": exprs,

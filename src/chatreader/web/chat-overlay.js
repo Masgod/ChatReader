@@ -46,6 +46,8 @@ function applyTheme() {
   s.setProperty("--radius", theme.bubble.radius + "px");
   s.setProperty("--ev-bg", theme.events.background);
   s.setProperty("--ev-fg", theme.events.color);
+  s.setProperty("--name-fg", theme.sender.color);
+  s.setProperty("--name-line", theme.sender.outline);
   s.setProperty("--pw", theme.bubble.portrait.width + "px");
   s.setProperty("--ph", theme.bubble.portrait.height + "px");
   s.setProperty("--s", config.overlay_scale / 100);
@@ -106,9 +108,10 @@ function show(m) {
   const isEvent = m.kind !== "chat";
   const bubble = el("div", "bubble speaking" + (isEvent ? " event" : ""));
   const body = el("div", "body");
-  body.append(el("div", "name", m.user));
-  if (isEvent && EVENT_NOTES[m.kind]) body.append(el("div", "note", EVENT_NOTES[m.kind](m.detail)));
-  if (m.text) body.append(el("div", "text", m.text));
+  const content = el("div", "content");  // the text box in the "top" layout
+  if (isEvent && EVENT_NOTES[m.kind]) content.append(el("div", "note", EVENT_NOTES[m.kind](m.detail)));
+  if (m.text) content.append(el("div", "text", m.text));
+  body.append(el("div", "name", m.user), content);
   bubble.append(makeAvatar(m, theme), body);
   stack.append(bubble);
   bubbles.set(m.id, { el: bubble, timer: null });

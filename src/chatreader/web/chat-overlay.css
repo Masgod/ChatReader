@@ -20,19 +20,29 @@ html, body { margin: 0; background: transparent; overflow: hidden; }
 .bubble.event { background: var(--ev-bg); color: var(--ev-fg); }
 .bubble.speaking { transform: scale(1.04); box-shadow: 0 0 0 2px var(--fg), 0 2px 12px rgba(0, 0, 0, .5); }
 
-/* layout "top": the portrait sits above the text box, which alone carries the bubble colors */
-#stack.layout-top .bubble { flex-direction: column; gap: 6px; padding: 0; background: none; box-shadow: none; }
+/* layout "top": the portrait with the viewer's name beside it, and the message in a box underneath.
+   .body is dissolved so the name and the box become grid items of the bubble. */
+#stack.layout-top .bubble {
+  display: grid; grid-template-columns: auto auto; grid-template-areas: "avatar name" "box box";
+  justify-content: start; align-items: end; gap: 6px 10px; padding: 0; background: none; box-shadow: none;
+}
 #stack.layout-top .bubble.speaking { transform: scale(1.04); box-shadow: none; }
-#stack.layout-top .bubble .avatar { border-radius: var(--radius); }
+#stack.layout-top .bubble .avatar { grid-area: avatar; border-radius: var(--radius); }
 #stack.layout-top .bubble .avatar img { object-fit: contain; }
-#stack.layout-top .bubble .body {
-  box-sizing: border-box; min-width: 175px; padding: 14px 20px; text-align: center;
+#stack.layout-top .bubble .body { display: contents; }
+#stack.layout-top .bubble .name {
+  grid-area: name; max-width: 170px; margin-bottom: 4px; font-size: 20px; font-weight: 800; opacity: 1; color: var(--name-fg, #fff);
+  -webkit-text-stroke: 4px var(--name-line, #000); paint-order: stroke fill; text-shadow: 0 2px 4px rgba(0, 0, 0, .6);
+}
+#stack.layout-top .bubble .content {
+  grid-area: box; box-sizing: border-box; min-width: 175px; padding: 14px 20px; text-align: center;
   background: var(--bg); color: var(--fg); border-radius: var(--radius); box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
 }
-#stack.layout-top .bubble.event .body { background: var(--ev-bg); color: var(--ev-fg); }
-#stack.layout-top .bubble.speaking .body { box-shadow: 0 0 0 2px var(--fg), 0 2px 12px rgba(0, 0, 0, .5); }
-#stack.layout-top.pos-top-left .bubble, #stack.layout-top.pos-middle-left .bubble, #stack.layout-top.pos-bottom-left .bubble { align-items: flex-start; }
-#stack.layout-top.pos-top-right .bubble, #stack.layout-top.pos-middle-right .bubble, #stack.layout-top.pos-bottom-right .bubble { align-items: flex-end; }
+#stack.layout-top .bubble.event .content { background: var(--ev-bg); color: var(--ev-fg); }
+#stack.layout-top .bubble.speaking .content { box-shadow: 0 0 0 2px var(--fg), 0 2px 12px rgba(0, 0, 0, .5); }
+#stack.layout-top.pos-top-right .bubble, #stack.layout-top.pos-middle-right .bubble, #stack.layout-top.pos-bottom-right .bubble {
+  grid-template-areas: "name avatar" "box box"; justify-content: end; text-align: right;
+}
 
 .avatar { flex: none; width: var(--pw, 56px); height: var(--ph, 56px); border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; }
 .avatar img { width: 100%; height: 100%; object-fit: cover; }
