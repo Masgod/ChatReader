@@ -39,7 +39,7 @@ function applyTheme() {
   const { config, theme, warning } = overlay;
   if (warning) console.warn(warning);
   const animation = reduced ? "fade" : theme.bubble.animation;
-  stack.className = "pos-" + config.overlay_position + " anim-" + animation;
+  stack.className = "pos-" + config.overlay_position + " anim-" + animation + " layout-" + theme.bubble.layout;
   const s = stack.style;
   s.setProperty("--bg", theme.bubble.background);
   s.setProperty("--fg", theme.bubble.color);

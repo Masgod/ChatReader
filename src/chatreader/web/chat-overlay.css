@@ -20,6 +20,20 @@ html, body { margin: 0; background: transparent; overflow: hidden; }
 .bubble.event { background: var(--ev-bg); color: var(--ev-fg); }
 .bubble.speaking { transform: scale(1.04); box-shadow: 0 0 0 2px var(--fg), 0 2px 12px rgba(0, 0, 0, .5); }
 
+/* layout "top": the portrait sits above the text box, which alone carries the bubble colors */
+#stack.layout-top .bubble { flex-direction: column; gap: 6px; padding: 0; background: none; box-shadow: none; }
+#stack.layout-top .bubble.speaking { transform: scale(1.04); box-shadow: none; }
+#stack.layout-top .bubble .avatar { width: 96px; height: 96px; border-radius: var(--radius); }
+#stack.layout-top .bubble .avatar img { object-fit: contain; }
+#stack.layout-top .bubble .body {
+  box-sizing: border-box; min-width: 120px; padding: 12px 16px; text-align: center;
+  background: var(--bg); color: var(--fg); border-radius: var(--radius); box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+}
+#stack.layout-top .bubble.event .body { background: var(--ev-bg); color: var(--ev-fg); }
+#stack.layout-top .bubble.speaking .body { box-shadow: 0 0 0 2px var(--fg), 0 2px 12px rgba(0, 0, 0, .5); }
+#stack.layout-top.pos-top-left .bubble, #stack.layout-top.pos-middle-left .bubble, #stack.layout-top.pos-bottom-left .bubble { align-items: flex-start; }
+#stack.layout-top.pos-top-right .bubble, #stack.layout-top.pos-middle-right .bubble, #stack.layout-top.pos-bottom-right .bubble { align-items: flex-end; }
+
 .avatar { flex: none; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; }
 .avatar img { width: 100%; height: 100%; object-fit: cover; }
 .avatar.initial { background: var(--fg); color: var(--bg); font-weight: 700; font-size: 26px; }

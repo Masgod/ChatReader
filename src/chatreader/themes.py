@@ -16,6 +16,7 @@ IMAGE_EXTS = {"png", "jpg", "jpeg", "webp", "gif", "svg"}
 FONT_EXTS = {"woff2", "otf", "ttf"}
 SERVED_EXTS = IMAGE_EXTS | FONT_EXTS  # theme.toml is never served
 ANIMATIONS = ("fade", "slide", "snap", "none")
+LAYOUTS = ("side", "top")  # portrait beside the text, or above it
 MAX_IMAGES = 200
 MAX_FILE_BYTES = 5_000_000
 MAX_MANIFEST_BYTES = 64_000
@@ -123,6 +124,9 @@ def load_theme(folder: Path, name: str) -> dict:
     animation = bubble.get("animation", "slide")
     if animation not in ANIMATIONS:
         raise ThemeError("bubble.animation must be one of " + ", ".join(ANIMATIONS))
+    layout = bubble.get("layout", "side")
+    if layout not in LAYOUTS:
+        raise ThemeError("bubble.layout must be one of " + ", ".join(LAYOUTS))
     radius = bubble.get("radius", 12)
     if type(radius) is not int or not 0 <= radius <= 40:
         raise ThemeError("bubble.radius must be a whole number from 0 to 40")
@@ -153,6 +157,7 @@ def load_theme(folder: Path, name: str) -> dict:
             "color": _color(bubble, "color", "#f4f1ff", "bubble"),
             "radius": radius,
             "animation": animation,
+            "layout": layout,
         },
         "events": {
             "background": _color(events, "background", "#4b2a86", "events"),
