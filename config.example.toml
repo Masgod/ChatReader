@@ -72,3 +72,5 @@ random_cooldown_base = 10   # per viewer, seconds
 random_cooldown_max = 300
 random_global_base = 2      # whole chat, seconds
 random_global_max = 60
+# Optional: Client ID of your app at dev.twitch.tv/console, so ChatReader can answer !random and !hero in your Twitch chat.
+twitch_client_id = ""

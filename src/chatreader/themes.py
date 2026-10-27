@@ -190,6 +190,15 @@ def load_named(user_dir: Path | None, name: str) -> dict:
     return load_theme(folder, name)
 
 
+def hero_name(user_dir: Path | None, name: str, slot: int) -> str | None:
+    """The hero a viewer's slot lands on, by the same `heroes[slot % n]` rule the chat overlay page uses."""
+    try:
+        heroes = load_named(user_dir, name)["heroes"]
+    except ThemeError:
+        return None
+    return heroes[slot % len(heroes)]["name"].replace("_", " ").title() if heroes else None
+
+
 def list_themes(user_dir: Path | None) -> list[dict]:
     out = [{"name": DEFAULT, "title": load_named(None, DEFAULT)["name"], "valid": True, "error": None}]
     if user_dir is None or not user_dir.is_dir():

@@ -53,6 +53,7 @@ The file uses the defaults below when a key is missing. Keys that are not known 
 | `overlay_scale` | `100` | Size of everything in the chat overlay (bubble, portrait, text) in percent, 50 to 200. |
 | `random_cooldown_base` / `random_cooldown_max` | `10` / `300` | Seconds a viewer waits after `!random`; doubles on each use in a row (up to the max), resets after a quiet minute. `base` must not exceed `max`; `max` is at most 3600. |
 | `random_global_base` / `random_global_max` | `2` / `60` | The same wait, shared by the whole chat. |
+| `twitch_client_id` | `""` | Client ID of your app at dev.twitch.tv/console. With it (and a login from Settings) ChatReader answers `!random` and `!hero` in your Twitch chat. Empty: no replies. |
 
 `config.example.toml` lists the same keys with comments. The app does not copy it; it writes the defaults.
 

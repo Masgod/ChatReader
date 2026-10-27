@@ -19,9 +19,11 @@ _JOIN_TIMEOUT = 1.0
 
 
 class Controller:
-    def __init__(self, cfg: Config, player, tts, source_factories: dict[str, Callable], events=None, heroes=None):
+    def __init__(self, cfg: Config, player, tts, source_factories: dict[str, Callable], events=None, heroes=None, reply=None, hero_name=None):
         self.cfg = cfg
-        self._heroes = heroes  # optional HeroPicker; enables the !random chat command
+        self._heroes = heroes  # optional HeroPicker; enables the !random and !hero chat commands
+        self._reply = reply  # optional callable(text): posts in the Twitch chat
+        self._hero_name = hero_name  # optional callable(slot) -> hero name or None
         self._player = player
         self._tts = tts
         self._factories = source_factories
@@ -39,9 +41,8 @@ class Controller:
                 original = msg
                 msg = apply(msg, cfg, self._filter_state)
             if msg is None:
-                if reason == "command" and self._heroes and original.text.strip().lower() == "!random":
-                    done = self._heroes.reroll(original.platform, original.user, cfg) is not None
-                    self._record(original.user, original.text, "command:random" if done else "skipped:command")
+                if reason == "command" and self._heroes and original.text.strip().lower() in ("!random", "!hero"):
+                    self._hero_command(original, cfg)
                     return
                 self._record(original.user, original.text, f"skipped:{reason}" if reason else "skipped")
                 return
@@ -60,6 +61,20 @@ class Controller:
             self._record(msg.user, msg.text, "queued")
         except Exception:
             log.exception("message dropped")
+
+    def _hero_command(self, msg: Msg, cfg: Config) -> None:
+        word = msg.text.strip().lower()
+        if word == "!random":
+            slot = self._heroes.reroll(msg.platform, msg.user, cfg)
+        else:
+            slot = self._heroes.slot(msg.platform, msg.user) if self._heroes.may_ask(msg.platform, msg.user, cfg) else None
+        if slot is None:
+            self._record(msg.user, msg.text, "skipped:command")
+            return
+        self._record(msg.user, msg.text, "command:" + word[1:])
+        name = self._hero_name(slot) if self._hero_name else None
+        if self._reply and msg.platform == "twitch" and name:
+            self._reply(f"@{msg.user} agora é {name}" if word == "!random" else f"@{msg.user} é {name}")
 
     def _slot(self, msg: Msg) -> int:
         return self._heroes.slot(msg.platform, msg.user) if self._heroes else slot_for(msg.platform, msg.user)

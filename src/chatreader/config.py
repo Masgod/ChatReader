@@ -22,6 +22,7 @@ YOUTUBE_URL_RE = re.compile(r"(?:v=|youtu\.be/|/live/|/embed/)([A-Za-z0-9_-]{11}
 @dataclass
 class Config:
     twitch_channel: str = ""
+    twitch_client_id: str = ""  # from dev.twitch.tv/console; lets the app answer !random and !hero in your chat
     youtube_video_id: str = ""
     voice_pt: str = "pf_dora"
     voice_en: str = "af_heart"
@@ -108,13 +109,16 @@ def normalize(cfg: Config) -> Config:
     m = CHANNEL_URL_RE.search(chan)
     if m:
         chan = m.group(1) or m.group(2)
-    return Config(**{**asdict(cfg), "twitch_channel": channel, "youtube_video_id": video, "youtube_channel": chan})
+    return Config(**{**asdict(cfg), "twitch_channel": channel, "youtube_video_id": video, "youtube_channel": chan,
+                       "twitch_client_id": cfg.twitch_client_id.strip()})
 
 
 def validate(cfg: Config) -> list[str]:
     errors = []
     if cfg.twitch_channel and not TWITCH_RE.fullmatch(cfg.twitch_channel):
         errors.append("twitch_channel must be 3-25 chars of a-z, 0-9 or _")
+    if cfg.twitch_client_id and not re.fullmatch(r"[A-Za-z0-9]{10,64}", cfg.twitch_client_id):
+        errors.append("twitch_client_id must be 10-64 letters and digits (copy it from dev.twitch.tv/console)")
     if cfg.youtube_video_id and not YOUTUBE_RE.fullmatch(cfg.youtube_video_id):
         errors.append("youtube_video_id must be an 11-char YouTube ID")
     if cfg.queue_size < 1:

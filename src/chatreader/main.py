@@ -16,7 +16,9 @@ from chatreader.player import Player
 from chatreader.server import Hub, ViewHub, create_app, run_server
 from chatreader.sources.twitch import run_twitch
 from chatreader.sources.youtube import run_youtube
+from chatreader.themes import hero_name
 from chatreader.tts import KokoroTTS, ensure_models
+from chatreader.twitch_chat import TwitchChat
 
 
 def _setup_logging(app: Path, debug: bool) -> None:
@@ -109,7 +111,17 @@ def main(home: str | None = None) -> None:
     tts = KokoroTTS(voices, cfg, on_warning=lambda m: (log.warning(m), notify(m)))
     events = EventLog()
     logging.getLogger().addHandler(LogMirror(events))
-    controller = Controller(cfg, None, tts, {"twitch": run_twitch, "youtube": run_youtube}, events, HeroPicker(app / "viewer_heroes.json"))
+    twitch = TwitchChat(app / "twitch_token.json")
+
+    def reply(text: str) -> None:
+        c = controller.cfg
+        if c.twitch_client_id and c.twitch_channel:  # off the chat thread: sending is a network call
+            threading.Thread(target=twitch.send, args=(c.twitch_client_id, c.twitch_channel, text), daemon=True).start()
+
+    controller = Controller(
+        cfg, None, tts, {"twitch": run_twitch, "youtube": run_youtube}, events, HeroPicker(app / "viewer_heroes.json"),
+        reply=reply, hero_name=lambda slot: hero_name(app / "themes", controller.cfg.overlay_theme, slot),
+    )
     view = ViewHub()
 
     def on_item_event(item, outcome: str) -> None:
@@ -140,7 +152,7 @@ def main(home: str | None = None) -> None:
                 lambda: controller.cfg, apply_config, hub, controller.speak_test,
                 controller.snapshot, control,
                 queue=player, events=events, toggle=make_toggle(controller, apply_config), voices=tts.voices,
-                view=view, themes_dir=app / "themes",
+                view=view, themes_dir=app / "themes", twitch=twitch,
             )
             stop_server = run_server(app_obj, cfg.port)  # raises if the port is taken
             if first_run:

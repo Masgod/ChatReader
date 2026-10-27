@@ -38,8 +38,8 @@ class HeroPicker:
         self._clock = clock
         self._rng = rng
         self._lock = threading.Lock()
-        self._global = _Cooldown()
-        self._viewers: dict[str, _Cooldown] = {}  # shortcut: never pruned (tens of bytes per viewer), upgrade if memory ever matters
+        # per command: (whole chat, each viewer). shortcut: viewers are never pruned (tens of bytes each), upgrade if memory ever matters
+        self._gates: dict[str, tuple[_Cooldown, dict[str, _Cooldown]]] = {}
         self._slots = self._load()
 
     def slot(self, platform: str, user: str) -> int:
@@ -49,12 +49,8 @@ class HeroPicker:
         """A new slot for the viewer, or None while a wait (theirs or the chat's) is still running."""
         key = self._key(platform, user)
         with self._lock:
-            now = self._clock()
-            mine = self._viewers.setdefault(key, _Cooldown())
-            if not (mine.ready(now) and self._global.ready(now)):
+            if not self._pass("random", key, cfg):
                 return None
-            mine.hit(now, cfg.random_cooldown_base, cfg.random_cooldown_max)
-            self._global.hit(now, cfg.random_global_base, cfg.random_global_max)
             old = self.slot(platform, user)
             new = old
             while new == old:
@@ -62,6 +58,22 @@ class HeroPicker:
             self._slots[key] = new
             self._save()
             return new
+
+    def may_ask(self, platform: str, user: str, cfg: Config) -> bool:
+        """Whether a `!hero` question is allowed now; same waits as `!random`, counted separately."""
+        with self._lock:
+            return self._pass("hero", self._key(platform, user), cfg)
+
+    def _pass(self, command: str, key: str, cfg: Config) -> bool:
+        """Check both waits and, only if both are over, start the next ones. Callers hold the lock."""
+        now = self._clock()
+        chat, viewers = self._gates.setdefault(command, (_Cooldown(), {}))
+        mine = viewers.setdefault(key, _Cooldown())
+        if not (mine.ready(now) and chat.ready(now)):
+            return False
+        mine.hit(now, cfg.random_cooldown_base, cfg.random_cooldown_max)
+        chat.hit(now, cfg.random_global_base, cfg.random_global_max)
+        return True
 
     @staticmethod
     def _key(platform: str, user: str) -> str:

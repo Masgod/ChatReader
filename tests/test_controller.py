@@ -486,3 +486,47 @@ def test_other_commands_stay_dropped_with_heroes_enabled(tmp_path):
     c, player, _ = _with_heroes(tmp_path)
     c.on_msg(Msg("twitch", "bob", "!command", 0.0))
     assert player.submitted == []
+
+
+def _replying(tmp_path):
+    from chatreader.heroes import HeroPicker
+
+    sent = []
+    player, events = FakePlayer(), EventLog()
+    heroes = HeroPicker(tmp_path / "h.json", rng=lambda bits: 5)
+    cfg = Config(twitch_channel="chan", youtube_video_id="", random_global_base=0, random_global_max=0)
+    c = Controller(cfg, player, FakeTTS(),
+                   {"twitch": FakeSource(), "youtube": FakeSource()}, events, heroes,
+                   reply=sent.append, hero_name=lambda slot: f"Hero{slot}")
+    return c, sent, events
+
+
+def test_random_replies_with_the_new_hero_without_an_article(tmp_path):
+    c, sent, _ = _replying(tmp_path)
+    c.on_msg(Msg("twitch", "alice", "!random", 0.0))
+    assert sent == ["@alice agora é Hero5"]
+
+
+def test_hero_command_replies_with_the_current_hero_and_waits(tmp_path):
+    from chatreader.voices import slot_for
+
+    c, sent, events = _replying(tmp_path)
+    c.on_msg(Msg("twitch", "alice", "!hero", 0.0))
+    c.on_msg(Msg("twitch", "alice", "!hero", 1.0))
+    assert sent == [f"@alice é Hero{slot_for('twitch', 'alice')}"]
+    assert _outcome_names(events) == ["command:hero", "skipped:command"]
+
+
+def test_no_reply_for_youtube_or_a_blocked_random(tmp_path):
+    c, sent, _ = _replying(tmp_path)
+    c.on_msg(Msg("youtube", "yan", "!random", 0.0))
+    c.on_msg(Msg("twitch", "alice", "!random", 1.0))
+    c.on_msg(Msg("twitch", "alice", "!random", 2.0))
+    assert sent == ["@alice agora é Hero5"]
+
+
+def test_no_reply_when_the_hero_has_no_name(tmp_path):
+    c, sent, _ = _replying(tmp_path)
+    c._hero_name = lambda slot: None
+    c.on_msg(Msg("twitch", "alice", "!hero", 0.0))
+    assert sent == []

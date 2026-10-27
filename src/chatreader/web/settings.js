@@ -179,6 +179,28 @@
     try { await navigator.clipboard.writeText(box.value); flash("Chat overlay URL copied"); }
     catch { box.focus(); box.select(); flash("Copy it from the box"); }
   };
+  const loginHint = (...nodes) => $("#twitch-login-hint").replaceChildren(...nodes);
+  async function watchTwitch() {
+    for (let i = 0; i < 900; i++) {  // about 30 minutes, the longest Twitch keeps a code alive
+      await new Promise((r) => setTimeout(r, 2000));
+      let s = "";
+      try { s = (await api("/api/twitch/status")).state; } catch { continue; }
+      if (s === "connected") { loginHint("Connected · ChatReader can answer in your chat"); return; }
+      if (s !== "waiting") { loginHint("The login did not finish. Try Connect Twitch again."); return; }
+    }
+  }
+  $("#twitch-login").onclick = async () => {
+    if (dirty()) { flash("Save your changes first", "bad"); return; }
+    try {
+      const r = await api("/api/twitch/login", { body: {} });
+      const link = document.createElement("a");
+      link.href = r.verification_uri; link.target = "_blank"; link.rel = "noopener"; link.textContent = "twitch.tv/activate";
+      loginHint("Open ", link, " while logged in as the account that should answer, and enter ", Object.assign(document.createElement("b"), { textContent: r.user_code }));
+      watchTwitch();
+    } catch (e) { flash(e.message || "Could not start the Twitch login", "bad"); }
+  };
+  api("/api/twitch/status").then((r) => { if (r.state === "connected") loginHint("Connected · ChatReader can answer in your chat"); }).catch(() => {});
+
   $("#test-bubble").onclick = async () => {
     try { await api("/api/view-test", { body: {} }); flash("Test bubble sent · it uses the saved settings"); }
     catch { flash("Test failed", "bad"); }

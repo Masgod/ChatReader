@@ -57,6 +57,15 @@ def test_random_wait_bounds(kind, base, cap, ok):
     assert (validate(cfg) == []) is ok
 
 
+@pytest.mark.parametrize("v,ok", [("", True), ("abcdefghij0123456789abcdefghij", True), ("short", False), ("has space in it 12345", False)])
+def test_twitch_client_id_shape(v, ok):
+    assert (validate(Config(twitch_client_id=v)) == []) is ok
+
+
+def test_twitch_client_id_is_trimmed():
+    assert normalize(Config(twitch_client_id="  abcdefghij0123456789abcdefghij \n")).twitch_client_id == "abcdefghij0123456789abcdefghij"
+
+
 @pytest.mark.parametrize("v,ok", [("bottom-left", True), ("top-right", True), ("middle-left", True), ("center", False), ("", False)])
 def test_overlay_position_choices(v, ok):
     assert (validate(Config(overlay_position=v)) == []) is ok

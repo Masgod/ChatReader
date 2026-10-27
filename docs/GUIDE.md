@@ -103,6 +103,18 @@ A theme with a mistake is listed as not usable in Settings, and the overlay show
 
 A viewer who types `!random` in chat gets a new random hero, and keeps it: the choice is saved in `viewer_heroes.json` in the app folder, so it survives restarts. The command is never read aloud. To stop people spamming it, each use makes the next wait longer: a viewer waits 10 s after the first use, then 20 s, 40 s and so on up to 5 minutes, and the whole chat shares a similar wait (2 s up to 60 s). After a quiet minute the waits start over. A `!random` sent too early is ignored. The four wait values are in `config.toml` (`random_*`, see CONFIGURATION.md). Delete a viewer's line in `viewer_heroes.json` (with ChatReader closed) to give them their original hero back.
 
+`!hero` tells a viewer which hero they have now (it uses the same waits, counted on its own).
+
+#### Answering in your Twitch chat (optional)
+
+With a Twitch login, ChatReader replies as your own account: after `!random`, `@viewer agora é Wraith`; after `!hero`, `@viewer é Wraith`. Without it the commands still work, silently. YouTube chat never gets replies. One-time setup:
+
+1. Go to [dev.twitch.tv/console](https://dev.twitch.tv/console) (Twitch asks you to turn on two-factor authentication first), choose **Register Your Application**, give it any name, set the OAuth Redirect URL to `http://localhost`, the category to Chat Bot, and the client type to **Public**. Copy the **Client ID**.
+2. Settings, Twitch section: paste the Client ID into **Twitch Client ID** and press Save.
+3. Press **Connect Twitch**. Open the link it shows while logged in as the account that should answer, enter the code, and authorize. The permission asked is only `user:write:chat` (send chat messages).
+
+The login is kept in `twitch_token.json` in the app folder, renewed by itself, and never leaves your computer except to talk to Twitch. Treat it like a password: don't share it or put it in a repository. Delete the file to log out; you can also revoke the app at twitch.tv/settings/connections. Replies are sent in the channel set as **Twitch channel**.
+
 ## 3b. Control it from OBS
 
 You can keep a small control panel next to your scenes, so you never leave OBS.

@@ -18,6 +18,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 from chatreader import themes
 from chatreader.config import Config, normalize, same_type, validate
 from chatreader.languages import LANGUAGES
+from chatreader.twitch_chat import TwitchError
 
 READY_TIMEOUT = 5.0  # seconds run_server waits for uvicorn to start listening
 EXTRA_WAIT = 2.0  # seconds added to the WAV duration before play() gives up
@@ -228,9 +229,26 @@ def create_app(
     voices: Callable[[], dict] | None = None,
     view: ViewHub | None = None,
     themes_dir: Path | None = None,
+    twitch=None,  # TwitchChat: start_auth(client_id) / status(); lets the app answer in the Twitch chat
 ) -> FastAPI:
     app = FastAPI()
     app.add_middleware(LocalOnly)
+
+    @app.post("/api/twitch/login")
+    def twitch_login():  # sync on purpose: it calls Twitch, so it must run in a worker thread
+        client_id = get_config().twitch_client_id
+        if twitch is None:
+            return JSONResponse({"errors": ["not available"]}, status_code=503)
+        if not client_id:
+            return JSONResponse({"errors": ["save a Twitch Client ID first"]}, status_code=422)
+        try:
+            return twitch.start_auth(client_id)
+        except TwitchError as e:
+            return JSONResponse({"errors": [str(e)]}, status_code=502)
+
+    @app.get("/api/twitch/status")
+    def twitch_status():
+        return {"state": twitch.status() if twitch is not None else "off"}
 
     @app.get("/themes/{name}/{path:path}")
     def theme_file(name: str, path: str):

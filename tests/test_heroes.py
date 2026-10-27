@@ -119,3 +119,14 @@ def test_unwritable_path_does_not_raise(tmp_path):
     blocker.write_text("x", encoding="utf-8")
     p = HeroPicker(blocker / "viewer_heroes.json", Clock(), rng=lambda bits: 9)
     assert p.reroll("twitch", "a", CFG) == 9  # still works in memory
+
+
+def test_may_ask_has_its_own_waits_apart_from_reroll(tmp_path):
+    clock = Clock()
+    cfg = Config(random_cooldown_base=10, random_cooldown_max=300, random_global_base=0, random_global_max=0)
+    p = make(tmp_path, clock, rolls=range(1, 50))
+    assert p.reroll("twitch", "a", cfg)
+    assert p.may_ask("twitch", "a", cfg)  # asking is not blocked by the re-roll wait
+    assert not p.may_ask("twitch", "a", cfg)
+    clock.t += 10
+    assert p.may_ask("twitch", "a", cfg)
