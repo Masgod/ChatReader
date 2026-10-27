@@ -126,7 +126,10 @@ function connect() {
   ws.onmessage = (e) => {
     let m;
     try { m = JSON.parse(e.data); } catch (err) { return; }
-    if (m.t === "hello" || m.t === "config") ready = loadOverlay();
+    if (m.t === "hello") {  // a fresh connection: bubbles from the old one will never get their end
+      for (const id of [...bubbles.keys()]) remove(id);
+      ready = loadOverlay();
+    } else if (m.t === "config") ready = loadOverlay();
     else if (m.t === "start") ready.then(() => show(m));
     else if (m.t === "end") ready.then(() => finish(m));
   };

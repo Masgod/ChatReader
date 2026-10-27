@@ -82,6 +82,20 @@ def test_invalid_theme_raises_with_a_useful_message(tmp_path, toml, fragment):
         load_theme(folder, "heroes_theme")
 
 
+@pytest.mark.parametrize("toml", ['fallback = ["a"]', "x = " + "[" * 5000 + "]" * 5000, 'font = ["a"]'])
+def test_odd_manifest_contents_raise_theme_error_not_crash(tmp_path, toml):
+    with pytest.raises(ThemeError):
+        load_theme(make(tmp_path, toml, heroes=()), "heroes_theme")
+
+
+def test_manifest_that_is_a_folder_raises_theme_error(tmp_path):
+    folder = tmp_path / "t"
+    (folder / "theme.toml").mkdir(parents=True)
+    with pytest.raises(ThemeError):
+        load_theme(folder, "t")
+    assert list_themes(tmp_path)[1]["valid"] is False  # one bad folder must not break the listing
+
+
 def test_missing_manifest_is_an_error(tmp_path):
     (tmp_path / "t").mkdir()
     with pytest.raises(ThemeError, match="missing"):

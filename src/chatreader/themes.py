@@ -114,8 +114,10 @@ def load_theme(folder: Path, name: str) -> dict:
         data = tomllib.loads(manifest.read_text(encoding="utf-8"))
     except FileNotFoundError:
         raise ThemeError("theme.toml is missing") from None
-    except (tomllib.TOMLDecodeError, UnicodeDecodeError) as e:
-        raise ThemeError(f"theme.toml is not valid: {e}") from None
+    except (tomllib.TOMLDecodeError, UnicodeDecodeError, RecursionError) as e:
+        raise ThemeError(f"theme.toml is not valid: {type(e).__name__}") from None
+    except OSError:
+        raise ThemeError("theme.toml can't be read") from None
     root = folder.resolve()
     bubble, events = _table(data, "bubble"), _table(data, "events")
     animation = bubble.get("animation", "slide")
@@ -138,6 +140,8 @@ def load_theme(folder: Path, name: str) -> dict:
     if sum(e["chance"] for e in exprs) > 1 + 1e-9:
         raise ThemeError("expression chances must add up to at most 1")
     fallback = data.get("fallback", "")
+    if not isinstance(fallback, str):
+        raise ThemeError("fallback must be an expression name")
     if fallback and fallback not in {e["name"] for e in exprs}:
         raise ThemeError("fallback must name one of the listed expressions")
     return {
