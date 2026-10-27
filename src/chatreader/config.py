@@ -9,6 +9,8 @@ from chatreader.languages import DEFAULT_LANGUAGES, LANGUAGES
 
 ROLE_CHOICES = {"sub", "vip", "mod"}
 EVENT_CHOICES = ["bits", "subs", "gifts", "raids", "superchat", "members"]
+OVERLAY_POSITIONS = ["top-left", "top-right", "middle-left", "middle-right", "bottom-left", "bottom-right"]
+THEME_NAME_RE = re.compile(r"[A-Za-z0-9_-]{1,40}")
 TWITCH_RE = re.compile(r"[a-z0-9_]{3,25}")
 VOICE_NAME_RE = re.compile(r"[a-z]{2}_[a-z0-9]+")
 YOUTUBE_RE = re.compile(r"[A-Za-z0-9_-]{11}")
@@ -49,6 +51,10 @@ class Config:
     read_events: bool = False  # master switch: events are only read when this is on
     event_kinds: list[str] = field(default_factory=lambda: list(EVENT_CHOICES))  # which events are read aloud
     min_bits: int = 0  # ignore cheers smaller than this
+    overlay_theme: str = "default"  # folder name under themes/, or the built-in default
+    overlay_position: str = "bottom-left"
+    overlay_max_bubbles: int = 4  # bubbles on screen at once
+    overlay_hold_seconds: int = 4  # how long a bubble stays after its voice ends
 
     def voices(self) -> dict[str, str]:
         """The voice chosen for each enabled language."""
@@ -130,6 +136,14 @@ def validate(cfg: Config) -> list[str]:
         errors.append("event_kinds must only contain " + ", ".join(EVENT_CHOICES))
     if not 0 <= cfg.min_bits <= 100000:
         errors.append("min_bits must be between 0 and 100000")
+    if not THEME_NAME_RE.fullmatch(cfg.overlay_theme):
+        errors.append("overlay_theme must be 1-40 letters, digits, - or _")
+    if cfg.overlay_position not in OVERLAY_POSITIONS:
+        errors.append("overlay_position must be one of " + ", ".join(OVERLAY_POSITIONS))
+    if not 1 <= cfg.overlay_max_bubbles <= 10:
+        errors.append("overlay_max_bubbles must be between 1 and 10")
+    if not 0 <= cfg.overlay_hold_seconds <= 30:
+        errors.append("overlay_hold_seconds must be between 0 and 30")
     if not 1 <= cfg.port <= 65535:
         errors.append("port must be between 1 and 65535")
     if not cfg.languages or len(set(cfg.languages)) != len(cfg.languages) or not set(cfg.languages) <= set(LANGUAGES):

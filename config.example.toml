@@ -57,3 +57,11 @@ repeat_seconds = 30
 
 # Give each chat user their own voice.
 per_user_voices = true
+
+# Chat overlay (/chat-overlay): theme folder name under themes/, or "default".
+overlay_theme = "default"
+# top-left, top-right, middle-left, middle-right, bottom-left or bottom-right.
+overlay_position = "bottom-left"
+# Bubbles on screen at once (1-10) and seconds they stay after the voice ends (0-30).
+overlay_max_bubbles = 4
+overlay_hold_seconds = 4

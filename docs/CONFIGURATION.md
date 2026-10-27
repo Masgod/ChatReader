@@ -46,6 +46,10 @@ The file uses the defaults below when a key is missing. Keys that are not known 
 | `per_user_voices` | `true` | Give each viewer a stable voice picked from the model's voices. |
 | `speak_emotes` | `true` | Read laughs (`LUL`, `KEKW`, `kkkk`, `rsrs`) as a laugh and leave out other emotes (`Kappa`, `:name:`). A message that is only emotes is skipped. |
 | `youtube_channel` | `""` | `@handle` or `UC...` channel ID. When set and `youtube_video_id` is empty, the app waits for the channel's live stream and connects by itself. |
+| `overlay_theme` | `"default"` | Chat overlay theme: a folder name under `themes/` in the app folder, or the built-in `default`. |
+| `overlay_position` | `"bottom-left"` | Where the bubbles sit: `top-left`, `top-right`, `middle-left`, `middle-right`, `bottom-left`, `bottom-right`. |
+| `overlay_max_bubbles` | `4` | Bubbles on screen at once, 1 to 10. |
+| `overlay_hold_seconds` | `4` | Seconds a bubble stays after its voice ends, 0 to 30. |
 
 `config.example.toml` lists the same keys with comments. The app does not copy it; it writes the defaults.
 
