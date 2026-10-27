@@ -1,5 +1,6 @@
 import asyncio
 import io
+import json
 import struct
 import threading
 import time
@@ -82,6 +83,71 @@ class Hub:
                 self._done.set()
 
 
+class ViewHub:
+    """Read-only event stream for the chat overlay: many clients, JSON text frames, server to client."""
+
+    MAX_CLIENTS = 8
+    SEND_TIMEOUT = 1.0
+
+    def __init__(self) -> None:
+        self._clients: set[WebSocket] = set()
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._started: set[int] = set()  # ids whose bubble is on screen
+        self._lock = threading.Lock()
+
+    @property
+    def client_count(self) -> int:
+        with self._lock:
+            return len(self._clients)
+
+    async def serve(self, ws: WebSocket) -> None:
+        if self.client_count >= self.MAX_CLIENTS:
+            await ws.close(code=1013)
+            return
+        await ws.accept()
+        self._loop = asyncio.get_running_loop()
+        try:
+            await ws.send_text(json.dumps({"t": "hello", "v": 1}))
+            with self._lock:
+                self._clients.add(ws)
+            while (await ws.receive())["type"] != "websocket.disconnect":
+                pass  # clients only listen
+        except (WebSocketDisconnect, RuntimeError):
+            pass
+        finally:
+            with self._lock:
+                self._clients.discard(ws)
+
+    def broadcast(self, payload: dict) -> None:
+        """Send to every client from any thread; a client that fails or is slow is dropped."""
+        loop = self._loop
+        with self._lock:
+            clients = list(self._clients)
+        if loop is None or not clients:
+            return
+        text = json.dumps(payload)
+        for ws in clients:
+            try:
+                asyncio.run_coroutine_threadsafe(ws.send_text(text), loop).result(self.SEND_TIMEOUT)
+            except Exception:
+                with self._lock:
+                    self._clients.discard(ws)
+
+    def on_start(self, item) -> None:
+        if item.view is None:
+            return
+        with self._lock:
+            self._started.add(item.id)
+        self.broadcast({"t": "start", "id": item.id, **item.view})
+
+    def on_event(self, item, outcome: str) -> None:
+        with self._lock:
+            was_shown = item.id in self._started
+            self._started.discard(item.id)
+        if was_shown and outcome in ("played", "failed", "skipped"):
+            self.broadcast({"t": "end", "id": item.id, "outcome": outcome})
+
+
 _STATIC = {
     "app.css": "text/css",
     "app.js": "text/javascript",
@@ -150,6 +216,7 @@ def create_app(
     events=None,  # EventLog
     toggle: Callable[[str, bool], None] | None = None,
     voices: Callable[[], dict] | None = None,
+    view: ViewHub | None = None,
 ) -> FastAPI:
     app = FastAPI()
     app.add_middleware(LocalOnly)
@@ -290,6 +357,11 @@ def create_app(
     @app.websocket("/ws")
     async def ws_endpoint(ws: WebSocket):
         await hub.serve(ws)
+
+    if view is not None:
+        @app.websocket("/ws/view")
+        async def view_endpoint(ws: WebSocket):
+            await view.serve(ws)
 
     return app
 
