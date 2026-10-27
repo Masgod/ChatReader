@@ -534,3 +534,47 @@ def test_post_test_passes_the_language(env):
     client, _, _, spoken = env
     assert client.post("/api/test", json={"text": "hola", "lang": "es"}).status_code == 200
     assert spoken == [("hola", "es")]
+
+
+def _theme_client(tmp_path, theme="default"):
+    folder = tmp_path / "mine"
+    (folder / "heroes" / "wraith").mkdir(parents=True)
+    (folder / "theme.toml").write_text('name = "Mine"\n', encoding="utf-8")
+    (folder / "heroes" / "wraith" / "happy.png").write_bytes(b"\x89PNG")
+    (tmp_path / "broken").mkdir()
+    app = create_app(lambda: Config(overlay_theme=theme), lambda c: None, Hub(), lambda t: None, lambda: {}, lambda a: None, themes_dir=tmp_path)
+    return TestClient(app, base_url="http://127.0.0.1")
+
+
+def test_theme_file_is_served_with_its_media_type(tmp_path):
+    with _theme_client(tmp_path) as c:
+        r = c.get("/themes/mine/heroes/wraith/happy.png")
+        assert r.status_code == 200 and r.headers["content-type"] == "image/png" and r.content == b"\x89PNG"
+
+
+@pytest.mark.parametrize("path", ["/themes/mine/theme.toml", "/themes/mine/..%2Fbroken/x.png", "/themes/mine/%2e%2e/%2e%2e/x.png", "/themes/default/theme.toml", "/themes/nope/x.png"])
+def test_theme_file_refuses_traversal_and_unlisted_files(tmp_path, path):
+    with _theme_client(tmp_path) as c:
+        assert c.get(path).status_code == 404
+
+
+def test_api_themes_lists_default_first_and_user_themes(tmp_path):
+    with _theme_client(tmp_path) as c:
+        rows = c.get("/api/themes").json()
+        assert [r["name"] for r in rows] == ["default", "broken", "mine"]
+        assert rows[1]["valid"] is False and rows[2]["valid"] is True
+
+
+def test_api_overlay_returns_the_selected_theme_and_config(tmp_path):
+    with _theme_client(tmp_path, "mine") as c:
+        body = c.get("/api/overlay").json()
+        assert body["warning"] is None and body["theme"]["name"] == "Mine"
+        assert body["theme"]["heroes"][0]["images"]["happy"] == "/themes/mine/heroes/wraith/happy.png"
+        assert body["config"] == {"overlay_theme": "mine", "overlay_position": "bottom-left", "overlay_max_bubbles": 4, "overlay_hold_seconds": 4}
+
+
+@pytest.mark.parametrize("theme", ["ghost", "broken"])
+def test_api_overlay_falls_back_to_default_with_a_warning(tmp_path, theme):
+    with _theme_client(tmp_path, theme) as c:
+        body = c.get("/api/overlay").json()
+        assert body["theme"]["name"] == "Default" and theme in body["warning"]

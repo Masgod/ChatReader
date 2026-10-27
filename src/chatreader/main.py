@@ -118,7 +118,7 @@ def main(home: str | None = None) -> None:
                 lambda: controller.cfg, apply_config, hub, controller.speak_test,
                 controller.snapshot, lambda a: icon.stop() if a == "quit" else getattr(controller, a)(),
                 queue=player, events=events, toggle=make_toggle(controller, apply_config), voices=tts.voices,
-                view=view,
+                view=view, themes_dir=app / "themes",
             )
             stop_server = run_server(app_obj, cfg.port)  # raises if the port is taken
             if first_run:

@@ -1,18 +1,21 @@
 import asyncio
 import io
 import json
+import mimetypes
 import struct
 import threading
 import time
 import wave
 from dataclasses import asdict, fields, is_dataclass
 from importlib import resources
+from pathlib import Path
 from typing import Callable
 
 import uvicorn
 from fastapi import BackgroundTasks, FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
+from chatreader import themes
 from chatreader.config import Config, normalize, same_type, validate
 from chatreader.languages import LANGUAGES
 
@@ -217,9 +220,34 @@ def create_app(
     toggle: Callable[[str, bool], None] | None = None,
     voices: Callable[[], dict] | None = None,
     view: ViewHub | None = None,
+    themes_dir: Path | None = None,
 ) -> FastAPI:
     app = FastAPI()
     app.add_middleware(LocalOnly)
+
+    @app.get("/themes/{name}/{path:path}")
+    def theme_file(name: str, path: str):
+        target = themes.resolve_file(themes_dir, name, path)
+        if target is None:
+            return Response(status_code=404)
+        media = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
+        return Response(target.read_bytes(), media_type=media)
+
+    @app.get("/api/themes")
+    def read_themes():
+        return themes.list_themes(themes_dir)
+
+    @app.get("/api/overlay")
+    def read_overlay():
+        cfg = get_config()
+        warning = None
+        try:
+            theme = themes.load_named(themes_dir, cfg.overlay_theme)
+        except themes.ThemeError as e:
+            theme = themes.load_named(None, themes.DEFAULT)
+            warning = f"Theme '{cfg.overlay_theme}' can't be used ({e}); showing the default theme."
+        keys = ("overlay_theme", "overlay_position", "overlay_max_bubbles", "overlay_hold_seconds")
+        return {"config": {k: getattr(cfg, k) for k in keys}, "theme": theme, "warning": warning}
 
     @app.get("/overlay")
     def overlay():
