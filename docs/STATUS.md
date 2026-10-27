@@ -6,7 +6,7 @@ Version 0.2.0, an early release. What has been tested, what has not, and the kno
 
 Automated:
 
-- `uv run pytest -q -m "not slow"`: 435 passed.
+- `uv run pytest -q -m "not slow"`: 541 passed, 1 skipped.
 
 Headless smoke launch with an empty config folder:
 
@@ -23,6 +23,7 @@ The unchecked items need live chat, OBS and a running game.
 - [x] Live Twitch chat (tested by the author on their own stream).
 - [ ] Live YouTube chat, for a few minutes.
 - [ ] Pause, Skip and Quit work from the tray.
+- [ ] The chat overlay in OBS: a bubble appears when the voice starts for Twitch and for YouTube chat, and none for filtered messages.
 - [ ] CPU use while a game runs: ______ %
 
 ## Known limits and risks
@@ -37,7 +38,7 @@ The unchecked items need live chat, OBS and a running game.
 
 Planned, in no fixed order. Open an issue to discuss or vote on any of these.
 
-- **On-screen text overlay** in OBS (who spoke, bits, subs). To be designed in detail.
+- **Emote images in the chat overlay bubbles**, and a step-by-step "make a theme" guide (plus one for a game-hero theme). The text overlay itself is done; see the guide section 3a.
 - **Priority for events** in the speech queue, so cheers and subs are not dropped when the queue is full.
 - **Channel point rewards** (custom Twitch rewards). Needs a Twitch login (OAuth), so it needs its own design.
 - **Installer and code signing**, to avoid the SmartScreen warning and allow updates.

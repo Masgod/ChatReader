@@ -536,6 +536,20 @@ def test_post_test_passes_the_language(env):
     assert spoken == [("hola", "es")]
 
 
+def test_settings_page_has_the_overlay_section(env):
+    client, *_ = env
+    html = client.get("/").text
+    assert 'data-key="overlay_theme"' in html and 'id="test-bubble"' in html
+    assert html.count('data-choice="overlay_position"') == 6
+    assert 'data-num="overlay_max_bubbles"' in html and 'data-num="overlay_hold_seconds"' in html
+
+
+def test_settings_script_never_uses_innerhtml():
+    from importlib import resources
+
+    assert "innerHTML" not in (resources.files("chatreader") / "web" / "settings.js").read_text("utf-8")
+
+
 def _theme_client(tmp_path, theme="default"):
     folder = tmp_path / "mine"
     (folder / "heroes" / "wraith").mkdir(parents=True)
@@ -550,6 +564,15 @@ def test_theme_file_is_served_with_its_media_type(tmp_path):
     with _theme_client(tmp_path) as c:
         r = c.get("/themes/mine/heroes/wraith/happy.png")
         assert r.status_code == 200 and r.headers["content-type"] == "image/png" and r.content == b"\x89PNG"
+
+
+def test_theme_svg_cannot_run_script_when_opened_directly(tmp_path):
+    with _theme_client(tmp_path) as c:
+        (tmp_path / "mine" / "heroes" / "wraith" / "evil.svg").write_text("<svg xmlns='http://www.w3.org/2000/svg'><script>alert(1)</script></svg>")
+        r = c.get("/themes/mine/heroes/wraith/evil.svg")
+        assert r.status_code == 200
+        assert "sandbox" in r.headers["content-security-policy"] and "default-src 'none'" in r.headers["content-security-policy"]
+        assert r.headers["x-content-type-options"] == "nosniff"
 
 
 @pytest.mark.parametrize("path", ["/themes/mine/theme.toml", "/themes/mine/..%2Fbroken/x.png", "/themes/mine/%2e%2e/%2e%2e/x.png", "/themes/default/theme.toml", "/themes/nope/x.png"])

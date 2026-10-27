@@ -238,7 +238,9 @@ def create_app(
         if target is None:
             return Response(status_code=404)
         media = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
-        return Response(target.read_bytes(), media_type=media)
+        # theme files are untrusted: an SVG opened directly must not run script on the app's origin
+        headers = {"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox", "X-Content-Type-Options": "nosniff"}
+        return Response(target.read_bytes(), media_type=media, headers=headers)
 
     @app.get("/api/themes")
     def read_themes():

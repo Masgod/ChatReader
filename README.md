@@ -10,6 +10,7 @@ Reads your **Twitch** and **YouTube** live chat out loud, in Portuguese (BR), En
 - Choose which languages to read (Portuguese and English by default; Spanish, French and Italian in beta), picks the language per message; optional different voice per viewer
 - Reads laughs like `LUL` and `kkkk` as a laugh and skips emote names like `Kappa`
 - Filters bots, `!commands`, links, repeats and spam; read only subs, VIPs or mods if you want
+- Optional chat overlay for OBS: themed speech bubbles that appear as each voice starts, with your own theme folders
 - Control from the tray icon or an OBS dock: pause, skip, edit the queue
 - Local only: the server listens on `127.0.0.1`
 

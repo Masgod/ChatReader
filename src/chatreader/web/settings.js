@@ -35,6 +35,7 @@
     for (const b of $$("[data-lang-toggle]")) b.setAttribute("aria-pressed", state.languages.includes(b.dataset.langToggle));
     for (const r of $$("[data-voice-row]")) r.hidden = !state.languages.includes(r.dataset.voiceRow);
     for (const box of $$("[data-num]")) $("input", box).value = state[box.dataset.num];
+    for (const b of $$("[data-choice]")) b.setAttribute("aria-pressed", state[b.dataset.choice] === b.dataset.value);
     for (const g of $$("[data-roles]")) {
       const list = state[g.dataset.roles] || [];
       for (const b of $$("[data-role]", g)) b.setAttribute("aria-pressed", b.dataset.role ? list.includes(b.dataset.role) : list.length === 0);
@@ -65,6 +66,7 @@
   function load(cfg) {
     state = cfg; saved = snap(); savedPort = cfg.port; savedThreads = cfg.cpu_threads;
     fillVoices();
+    fillThemes();
     refresh();
   }
 
@@ -157,6 +159,31 @@
     }
   }
 
+  // --- chat overlay: theme list, position buttons, URL and test bubble ---
+  let themes = [];
+  function fillThemes() {
+    const sel = $("#overlay_theme"), cur = state && state.overlay_theme, known = new Set();
+    const opts = themes.map((t) => {
+      known.add(t.name);
+      const o = el("option", "", t.valid ? t.title : t.name + " — " + t.error); o.value = t.name; o.disabled = !t.valid; return o;
+    });
+    if (cur && !known.has(cur)) { const o = el("option", "", cur + " (not found)"); o.value = cur; opts.unshift(o); }
+    sel.replaceChildren(...opts);
+  }
+  const loadThemes = () => api("/api/themes").then((t) => { themes = t; fillThemes(); refresh(); }).catch(() => {});
+
+  for (const b of $$("[data-choice]")) b.onclick = () => { state[b.dataset.choice] = b.dataset.value; refresh(); };
+  $("#chat-overlay-url").value = location.origin + "/chat-overlay";
+  $("#copy-chat-url").onclick = async () => {
+    const box = $("#chat-overlay-url");
+    try { await navigator.clipboard.writeText(box.value); flash("Chat overlay URL copied"); }
+    catch { box.focus(); box.select(); flash("Copy it from the box"); }
+  };
+  $("#test-bubble").onclick = async () => {
+    try { await api("/api/view-test", { body: {} }); flash("Test bubble sent · it uses the saved settings"); }
+    catch { flash("Test failed", "bad"); }
+  };
+
   for (const b of $$("[data-toggle]")) b.onclick = () => { state[b.dataset.toggle] = !state[b.dataset.toggle]; refresh(); };
   for (const g of $$("[data-roles]")) for (const b of $$("[data-role]", g)) b.onclick = () => {
     const key = g.dataset.roles, role = b.dataset.role, list = state[key];
@@ -219,9 +246,13 @@
   if (matchMedia("(max-width: 479px)").matches) $$("details.sect").slice(1).forEach((d) => d.removeAttribute("open"));
 
   // The Console debug switch can change config behind this form's back; re-read when coming back if nothing is unsaved.
-  App.onTab((t) => { if (t === "settings" && state && !dirty()) api("/api/config").then(load).catch(() => {}); });
+  App.onTab((t) => {
+    if (t !== "settings") return;
+    loadThemes();  // a theme folder may have been added while the page was open
+    if (state && !dirty()) api("/api/config").then(load).catch(() => {});
+  });
 
-  Promise.all([api("/api/voices").catch(() => ({})), api("/api/config"), api("/api/languages")])
-    .then(([v, cfg, langs]) => { voices = v; languages = langs; buildLanguages(); load(cfg); })
+  Promise.all([api("/api/voices").catch(() => ({})), api("/api/config"), api("/api/languages"), api("/api/themes").catch(() => [])])
+    .then(([v, cfg, langs, t]) => { voices = v; languages = langs; themes = t; buildLanguages(); load(cfg); })
     .catch(() => {});
 })();

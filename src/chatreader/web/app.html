@@ -213,6 +213,54 @@
     </details>
 
     <details class="sect" open>
+      <summary><h2>Chat overlay</h2></summary>
+      <div class="card">
+        <div class="row grid">
+          <label for="overlay_theme"><div class="name">Theme</div><div class="hint">Folders in the themes folder of the app folder</div></label>
+          <div class="field grow"><select id="overlay_theme" data-key="overlay_theme"></select></div>
+        </div>
+        <div class="row grid">
+          <div><div class="name" id="l-overlay_position">Position</div><div class="hint">Where the bubbles sit in the Browser Source</div></div>
+          <div class="roles" role="group" aria-labelledby="l-overlay_position">
+            <button type="button" class="pill" data-choice="overlay_position" data-value="top-left">Top left</button>
+            <button type="button" class="pill" data-choice="overlay_position" data-value="top-right">Top right</button>
+            <button type="button" class="pill" data-choice="overlay_position" data-value="middle-left">Middle left</button>
+            <button type="button" class="pill" data-choice="overlay_position" data-value="middle-right">Middle right</button>
+            <button type="button" class="pill" data-choice="overlay_position" data-value="bottom-left">Bottom left</button>
+            <button type="button" class="pill" data-choice="overlay_position" data-value="bottom-right">Bottom right</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="txt"><div class="name">Bubbles on screen</div><div class="hint">The oldest leaves when there are more</div></div>
+          <div class="field step" data-num="overlay_max_bubbles" data-min="1" data-max="10" data-step="1">
+            <button type="button" data-d="-1" aria-label="Decrease bubbles on screen">−</button>
+            <input type="text" id="overlay_max_bubbles" inputmode="numeric" aria-label="Bubbles on screen">
+            <button type="button" data-d="1" aria-label="Increase bubbles on screen">+</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="txt"><div class="name">Stay after the voice ends</div><div class="hint">Seconds · 0 removes it right away</div></div>
+          <div class="field step" data-num="overlay_hold_seconds" data-min="0" data-max="30" data-step="1">
+            <button type="button" data-d="-1" aria-label="Decrease seconds to stay">−</button>
+            <input type="text" id="overlay_hold_seconds" inputmode="numeric" aria-label="Seconds to stay">
+            <button type="button" data-d="1" aria-label="Increase seconds to stay">+</button>
+          </div>
+        </div>
+        <div class="row grid">
+          <div><div class="name">OBS Browser Source URL</div><div class="hint">A second source, next to the audio one · 450 × 600 works well</div></div>
+          <div class="pick">
+            <div class="field grow"><input type="text" id="chat-overlay-url" class="mono-field" readonly aria-label="Chat overlay URL"></div>
+            <button type="button" class="btn" id="copy-chat-url">Copy</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="txt"><div class="name">Try it</div><div class="hint">Shows a sample bubble with the saved settings</div></div>
+          <button type="button" class="btn" id="test-bubble">Test bubble</button>
+        </div>
+      </div>
+    </details>
+
+    <details class="sect" open>
       <summary><h2>Ignored users <small id="ignored-count"></small></h2></summary>
       <div class="card pad">
         <div class="chips" id="chips"></div>

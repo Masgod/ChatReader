@@ -79,6 +79,26 @@ Good to know:
 - While OBS isn't connected, messages wait in the queue instead of being lost (up to your queue size).
 - If the source is hidden in a scene OBS may unload it. Keep it visible, or right-click the source and untick "Shutdown source when not visible".
 
+## 3a. Show the chat on screen (optional)
+
+The chat overlay shows a speech bubble for each message, at the moment its voice starts, and removes it a few seconds after the voice ends. Messages that are filtered out or skipped never get a bubble.
+
+1. In OBS add **another** Browser source (the audio one above is still required) with URL `http://127.0.0.1:8765/chat-overlay`.
+2. Set the size to about 450 × 600. The background is transparent.
+3. Open **Settings → Chat overlay** to pick the theme and the position (six places), how many bubbles stay on screen (1 to 10) and how many seconds a bubble stays after the voice ends (0 to 30).
+4. Press **Test bubble** to see a sample. It uses the saved settings, so save first.
+
+Events (bits, subs, gifts, raids, Super Chat, members) get their own colors and a one-line description when you have **Read events aloud** on.
+
+### Themes
+
+A theme is a folder in `themes` inside the app folder (`%APPDATA%\ChatReader\themes\<name>`). The built-in `default` theme needs no folder. A theme folder holds:
+
+- `theme.toml`: the look. `[bubble]` has `background`, `color` (like `#1f1b2e`), `radius` (0 to 40) and `animation` (`fade`, `slide`, `snap` or `none`); `[events]` has `background` and `color`; optional `font = "fonts/name.woff2"`; optional `[[expressions]]` entries (`name`, `chance` from 0 to 1, adding up to at most 1) and `fallback` (one of those names).
+- `heroes/<hero>/<expression>.png`: one avatar folder per character. Each viewer is given the same hero every time, and a random expression each time a bubble is shown. The format limits are 200 images, 5 MB per file, and `png`, `jpg`, `webp`, `gif` or `svg` images and `woff2`, `otf` or `ttf` fonts.
+
+A theme with a mistake is listed as not usable in Settings, and the overlay shows the default theme instead. Artwork from games or other people is your responsibility: ChatReader ships none, so make sure you are allowed to use what you put in a theme.
+
 ## 3b. Control it from OBS
 
 You can keep a small control panel next to your scenes, so you never leave OBS.
