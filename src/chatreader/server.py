@@ -188,7 +188,11 @@ def create_app(
         return JSONResponse({"errors": ["not available"]}, status_code=503)
 
     def plain(x):
-        return asdict(x) if is_dataclass(x) else x
+        if not is_dataclass(x):
+            return x
+        data = asdict(x)
+        data.pop("view", None)  # overlay-only data, not part of the queue API
+        return data
 
     @app.post("/api/control")
     async def post_control(request: Request, background: BackgroundTasks):

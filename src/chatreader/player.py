@@ -25,6 +25,7 @@ class QueueItem:
     lang: str
     user: str
     voice: str = ""
+    view: dict | None = dataclasses.field(default=None, compare=False)  # what the chat overlay shows
 
 
 class Output(Protocol):
@@ -42,10 +43,12 @@ class Player:
         output: Output,
         maxsize: int,
         on_event: Callable[[QueueItem, str], None] | None = None,
+        on_start: Callable[[QueueItem], None] | None = None,
     ):
         self._synth = synth
         self._output = output
         self._on_event = on_event
+        self._on_start = on_start
         # deque with maxlen silently drops the oldest item when a new one arrives at capacity.
         self._queue: collections.deque[QueueItem] = collections.deque(maxlen=maxsize)
         self._cond = threading.Condition()
@@ -72,11 +75,11 @@ class Player:
     def start(self) -> None:
         self._thread.start()
 
-    def submit(self, text: str, lang: str, user: str = "", voice: str = "") -> None:
+    def submit(self, text: str, lang: str, user: str = "", voice: str = "", view: dict | None = None) -> None:
         with self._cond:
             evicted = self._queue[0] if len(self._queue) == self._queue.maxlen else None
             self._next_id += 1
-            self._queue.append(QueueItem(self._next_id, text, lang, user, voice))
+            self._queue.append(QueueItem(self._next_id, text, lang, user, voice, view))
             self._cond.notify_all()
         if evicted:
             self._emit([(evicted, "dropped")])
@@ -146,6 +149,14 @@ class Player:
             except Exception:
                 log.exception("queue event listener failed")
 
+    def _start(self, item: QueueItem) -> None:
+        if not self._on_start:
+            return
+        try:
+            self._on_start(item)
+        except Exception:
+            log.exception("queue start listener failed")
+
     def _run(self) -> None:
         wait_connected = getattr(self._output, "wait_connected", None)
         while True:
@@ -194,6 +205,8 @@ class Player:
             except RuntimeError:
                 return None  # shutdown while this sentence was synthesizing
             if wav is not None:
+                if not any_audio:
+                    self._start(item)  # first audio of this item: the chat overlay shows its bubble now
                 any_audio = True
                 try:
                     self._output.play(wav)

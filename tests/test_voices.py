@@ -21,3 +21,11 @@ def test_voice_for_empty_pool_and_odd_names():
     assert voice_for("twitch", "ana", []) == ""
     for name in ("🔥 Ana  Maria", "", "x" * 300):
         assert voice_for("twitch", name, POOL) in POOL
+
+
+def test_slot_is_stable_case_insensitive_and_platform_specific():
+    from chatreader.voices import slot_for
+
+    assert slot_for("twitch", "Ana") == slot_for("twitch", "ana")
+    assert slot_for("twitch", "Ana") != slot_for("youtube", "Ana")
+    assert 0 <= slot_for("twitch", "Ana") < 2**32

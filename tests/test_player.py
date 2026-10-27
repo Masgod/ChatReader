@@ -561,3 +561,76 @@ def test_submit_without_voice_uses_empty():
     assert wait_until(lambda: out.played)
     player.shutdown()
     assert seen == [""]
+
+
+def test_on_start_fires_once_before_first_play_with_the_item_view():
+    order, out = [], FakeOutput()
+    real_play = out.play
+    out.play = lambda wav: (order.append("play"), real_play(wav))[1]
+    started = []
+    player = Player(synth, out, maxsize=10, on_start=lambda item: (order.append("start"), started.append(item.view)))
+    player.start()
+    try:
+        player.submit("Primeira frase. Segunda frase.", "en", "a", view={"user": "a"})
+        assert wait_until(lambda: len(out.played) == 2)
+        assert started == [{"user": "a"}]
+        assert order[0] == "start" and order.count("start") == 1
+    finally:
+        player.shutdown()
+
+
+def test_on_start_not_called_when_every_sentence_fails_synthesis():
+    started, events = [], []
+    player = Player(lambda t, l, v="": None, FakeOutput(), maxsize=10,
+                    on_event=lambda i, o: events.append(o), on_start=started.append)
+    player.start()
+    try:
+        player.submit("a", "en")
+        assert wait_until(lambda: events == ["failed"])
+        assert started == []
+    finally:
+        player.shutdown()
+
+
+def test_on_start_not_called_for_an_item_skipped_before_audio():
+    entered, release, started = threading.Event(), threading.Event(), []
+    player = Player(gated_synth(entered, release), FakeOutput(), maxsize=10, on_start=started.append)
+    player.start()
+    try:
+        player.submit("a", "en")
+        assert entered.wait(WAIT)
+        player.skip()
+        release.set()
+        player.submit("b", "en")
+        assert wait_until(lambda: len(started) == 1 and started[0].text == "b")
+    finally:
+        release.set()
+        player.shutdown()
+
+
+def test_failing_on_start_does_not_stop_playback():
+    out, events = FakeOutput(), []
+
+    def boom(item):
+        raise RuntimeError("listener bug")
+
+    player = Player(synth, out, maxsize=10, on_event=lambda i, o: events.append(o), on_start=boom)
+    player.start()
+    try:
+        player.submit("a", "en")
+        assert wait_until(lambda: events == ["played"])
+        assert out.played == [b"a"]
+    finally:
+        player.shutdown()
+
+
+def test_submit_without_view_keeps_view_none():
+    started = []
+    player = Player(synth, FakeOutput(), maxsize=10, on_start=started.append)
+    player.start()
+    try:
+        player.submit("a", "en")
+        assert wait_until(lambda: len(started) == 1)
+        assert started[0].view is None
+    finally:
+        player.shutdown()
