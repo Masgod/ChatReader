@@ -9,7 +9,7 @@ from chatreader.emotes import speak_emotes, strip_emotes
 from chatreader.filters import FilterState, apply, explain
 from chatreader.lang import detect_lang, spoken_text
 from chatreader.models import Msg
-from chatreader.voices import voice_for
+from chatreader.voices import slot_for, voice_for
 
 log = logging.getLogger(__name__)
 
@@ -49,7 +49,9 @@ class Controller:
                 if not spoken.text:
                     self._record(msg.user, msg.text, "skipped:emotes only")
                     return
-            self._player.submit(spoken_text(spoken, lang, cfg.announce_user), lang, msg.user, voice)
+            view = {"platform": msg.platform, "user": msg.user, "text": msg.text, "kind": msg.kind,
+                    "detail": msg.detail, "slot": slot_for(msg.platform, msg.user), "lang": lang}
+            self._player.submit(spoken_text(spoken, lang, cfg.announce_user), lang, msg.user, voice, view)
             self._record(msg.user, msg.text, "queued")
         except Exception:
             log.exception("message dropped")

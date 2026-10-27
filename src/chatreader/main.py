@@ -12,7 +12,7 @@ from chatreader.controller import Controller
 from chatreader.events import EventLog, LogMirror
 from chatreader.paths import app_dir, ensure_streams, stdio_stream
 from chatreader.player import Player
-from chatreader.server import Hub, create_app, run_server
+from chatreader.server import Hub, ViewHub, create_app, run_server
 from chatreader.sources.twitch import run_twitch
 from chatreader.sources.youtube import run_youtube
 from chatreader.tts import KokoroTTS, ensure_models
@@ -26,7 +26,7 @@ def _setup_logging(app: Path, debug: bool) -> None:
     root.setLevel(logging.DEBUG if debug else logging.WARNING)
 
 
-def make_apply(controller, path: Path, set_startup, save=save_config):
+def make_apply(controller, path: Path, set_startup, save=save_config, on_saved=None):
     """Build the PUT /api/config callback. The shortcut toggle runs first so a failure applies nothing."""
 
     lock = threading.Lock()  # saves run in worker threads, so serialize them
@@ -42,6 +42,11 @@ def make_apply(controller, path: Path, set_startup, save=save_config):
             controller.apply_config(new)
             save(path, new)
             logging.getLogger().setLevel(logging.DEBUG if new.debug else logging.WARNING)
+            if on_saved is not None:
+                try:
+                    on_saved()
+                except Exception:
+                    logging.getLogger("chatreader").exception("after-save hook failed")
 
     return apply_config
 
@@ -84,10 +89,20 @@ def main(home: str | None = None) -> None:
     events = EventLog()
     logging.getLogger().addHandler(LogMirror(events))
     controller = Controller(cfg, None, tts, {"twitch": run_twitch, "youtube": run_youtube}, events)
-    player = Player(tts.synth, hub, cfg.queue_size, on_event=controller.record_item_event)
+    view = ViewHub()
+
+    def on_item_event(item, outcome: str) -> None:
+        controller.record_item_event(item, outcome)
+        try:
+            view.on_event(item, outcome)  # the console record above must happen even if the overlay fails
+        except Exception:
+            log.exception("chat overlay event failed")
+
+    player = Player(tts.synth, hub, cfg.queue_size, on_event=on_item_event, on_start=view.on_start)
     controller._player = player  # the player's callback needs the controller, so wire it after both exist
     apply_config = make_apply(
-        controller, cfg_path, lambda on: startup.set_start_with_windows(on, app)
+        controller, cfg_path, lambda on: startup.set_start_with_windows(on, app),
+        on_saved=lambda: view.broadcast({"t": "config"}),
     )
 
     base = f"http://127.0.0.1:{cfg.port}"
@@ -103,6 +118,7 @@ def main(home: str | None = None) -> None:
                 lambda: controller.cfg, apply_config, hub, controller.speak_test,
                 controller.snapshot, lambda a: icon.stop() if a == "quit" else getattr(controller, a)(),
                 queue=player, events=events, toggle=make_toggle(controller, apply_config), voices=tts.voices,
+                view=view,
             )
             stop_server = run_server(app_obj, cfg.port)  # raises if the port is taken
             if first_run:

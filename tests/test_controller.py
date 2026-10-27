@@ -18,10 +18,11 @@ class FakePlayer:
         self.paused = False
         self.pending = 0
 
-    def submit(self, text, lang, user="", voice=""):
+    def submit(self, text, lang, user="", voice="", view=None):
         self.submitted.append((text, lang))
         self.voices = getattr(self, "voices", []) + [voice]
         self.users = getattr(self, "users", []) + [user]
+        self.views = getattr(self, "views", []) + [view]
 
     def set_maxsize(self, n):
         self.calls.append(("maxsize", n))
@@ -206,7 +207,7 @@ def test_pause_resume_skip_speak_test():
 def test_on_msg_exception_is_isolated():
     c, player, *_ = make()
 
-    def flaky(text, lang, user="", voice=""):
+    def flaky(text, lang, user="", voice="", view=None):
         if "boom" in text:
             raise RuntimeError("x")
         player.submitted.append((text, lang))
@@ -389,6 +390,31 @@ def test_controller_no_voice_when_disabled_and_for_speak_test():
     c.on_msg(Msg("twitch", "alice", "eu gostei muito dessa jogada ontem", 0.0))
     c.speak_test("hello there")
     assert player.voices == ["", ""]
+
+
+def test_view_payload_has_the_display_fields():
+    from chatreader.voices import slot_for
+
+    c, player = _voiced(Config(read_events=True), FakeTTS())
+    c.on_msg(Msg("twitch", "Alice", "eu gostei muito dessa jogada ontem", 0.0))
+    c.on_msg(Msg("youtube", "Bob", "mensagem do evento", 1.0, kind="bits", detail="100"))
+    chat, event = player.views
+    assert chat == {"platform": "twitch", "user": "Alice", "text": "eu gostei muito dessa jogada ontem",
+                    "kind": "chat", "detail": "", "slot": slot_for("twitch", "Alice"), "lang": "pt"}
+    assert (event["kind"], event["detail"], event["slot"]) == ("bits", "100", slot_for("youtube", "Bob"))
+    assert event["text"] == "mensagem do evento"  # the viewer's text, not "Bob doou 100 bits: ..."
+
+
+def test_view_text_keeps_the_original_when_laughs_are_spoken():
+    c, player = _voiced(Config(announce_user=False), FakeTTS())
+    c.on_msg(Msg("twitch", "alice", "great play Kappa KEKW", 0.0))
+    assert player.views[0]["text"] == "great play Kappa KEKW"
+
+
+def test_speak_test_has_no_view():
+    c, player = _voiced(Config(), FakeTTS())
+    c.speak_test("hello there")
+    assert player.views == [None]
 
 
 def test_controller_speaks_laughs_and_skips_emote_only_messages():

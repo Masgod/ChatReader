@@ -36,6 +36,24 @@ def test_failing_toggle_applies_and_saves_nothing(tmp_path):
     assert ctl.applied == [] and saves == []
 
 
+def test_make_apply_calls_on_saved_after_save(tmp_path):
+    ctl, order = Ctl(), []
+    apply = make_apply(ctl, tmp_path, lambda on: None, save=lambda p, c: order.append("save"), on_saved=lambda: order.append("saved"))
+    apply(replace(ctl.cfg, queue_size=3))
+    assert order == ["save", "saved"]
+
+
+def test_make_apply_survives_a_failing_on_saved(tmp_path):
+    ctl, saves = Ctl(), []
+
+    def boom():
+        raise RuntimeError("overlay gone")
+
+    apply = make_apply(ctl, tmp_path, lambda on: None, save=lambda p, c: saves.append(c), on_saved=boom)
+    apply(replace(ctl.cfg, queue_size=3))
+    assert len(saves) == 1 and len(ctl.applied) == 1
+
+
 def test_make_toggle_flips_debug_through_apply():
     from chatreader.main import make_toggle
 
