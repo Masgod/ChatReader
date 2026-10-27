@@ -133,6 +133,45 @@ def test_removed_or_dropped_item_never_sends_end(env, outcome):
         assert ws.receive_json() == {"t": "config"}
 
 
+def test_chat_overlay_page_and_static_files(env):
+    client, _ = env
+    page = client.get("/chat-overlay")
+    assert page.status_code == 200 and "/static/chat-overlay.js" in page.text and "/static/chat-overlay.css" in page.text
+    assert client.get("/static/chat-overlay.js").headers["content-type"].startswith("text/javascript")
+    assert client.get("/static/chat-overlay.css").headers["content-type"].startswith("text/css")
+
+
+def test_chat_overlay_files_never_use_innerhtml(env):
+    from importlib import resources
+
+    web = resources.files("chatreader") / "web"
+    for name in ("chat-overlay.html", "chat-overlay.js"):
+        assert "innerHTML" not in (web / name).read_text("utf-8")
+
+
+def test_view_test_sends_a_literal_start_then_end(env, monkeypatch):
+    monkeypatch.setattr("chatreader.server.TEST_BUBBLE_SECONDS", 0.05)
+    client, view = env
+    with connect(client) as ws:
+        ws.receive_json()
+        wait_for(lambda: view.client_count == 1)
+        assert client.post("/api/view-test", json={}).status_code == 200
+        start = ws.receive_json()
+        assert start["t"] == "start" and start["id"] == 0 and start["text"] == "<b>hi</b> & <img src=x>"
+        assert ws.receive_json() == {"t": "end", "id": 0, "outcome": "played"}
+
+
+def test_view_test_rejects_a_non_json_post(env):
+    client, _ = env
+    assert client.post("/api/view-test", content=b"{}", headers={"content-type": "text/plain"}).status_code == 403
+
+
+def test_view_test_without_a_view_hub_is_unavailable():
+    app = create_app(lambda: Config(), lambda c: None, Hub(), lambda t, lang="": None, lambda: {}, lambda a: None)
+    with TestClient(app, base_url="http://127.0.0.1") as c:
+        assert c.post("/api/view-test", json={}).status_code == 503
+
+
 def test_end_without_start_is_ignored(env):
     client, view = env
     with connect(client) as ws:

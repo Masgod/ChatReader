@@ -158,6 +158,13 @@ _STATIC = {
     "console.js": "text/javascript",
     "settings.js": "text/javascript",
     "icon.svg": "image/svg+xml",
+    "chat-overlay.js": "text/javascript",
+    "chat-overlay.css": "text/css",
+}
+TEST_BUBBLE_SECONDS = 3.0
+TEST_BUBBLE = {
+    "platform": "twitch", "user": "Preview", "text": "<b>hi</b> & <img src=x>",
+    "kind": "chat", "detail": "", "slot": 0, "lang": "en",
 }
 _LOCAL_HOSTS = {"127.0.0.1", "localhost", "[::1]"}
 
@@ -252,6 +259,21 @@ def create_app(
     @app.get("/overlay")
     def overlay():
         return _page("overlay.html")
+
+    @app.get("/chat-overlay")
+    def chat_overlay():
+        return _page("chat-overlay.html")
+
+    @app.post("/api/view-test")
+    def view_test():  # sync on purpose: broadcast blocks on the event loop, so it must run in a worker thread
+        if view is None:
+            return JSONResponse({"errors": ["not available"]}, status_code=503)
+        view.broadcast({"t": "start", "id": 0, **TEST_BUBBLE})  # real queue ids start at 1
+        end = {"t": "end", "id": 0, "outcome": "played"}
+        timer = threading.Timer(TEST_BUBBLE_SECONDS, view.broadcast, args=(end,))
+        timer.daemon = True
+        timer.start()
+        return {"ok": True}
 
     @app.get("/")
     @app.get("/dock")
