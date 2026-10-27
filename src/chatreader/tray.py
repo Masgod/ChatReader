@@ -28,7 +28,7 @@ def _tooltip(controller) -> str:
     return "ChatReader | " + " | ".join(f"{k}: {v}" for k, v in s.items())[:110]
 
 
-def build_icon(controller, settings_url: str, overlay_url: str, quit_cb) -> pystray.Icon:
+def build_icon(controller, settings_url: str, overlay_url: str, quit_cb, restart_cb=None) -> pystray.Icon:
     toggle = lambda icon, item: controller.resume() if controller.paused else controller.pause()  # noqa: E731
     copy = lambda icon, item: subprocess.run(["clip"], input=overlay_url, text=True, check=False, creationflags=0x08000000)  # noqa: E731
     menu = pystray.Menu(
@@ -36,6 +36,7 @@ def build_icon(controller, settings_url: str, overlay_url: str, quit_cb) -> pyst
         pystray.MenuItem("Skip current", lambda icon, item: controller.skip()),
         pystray.MenuItem("Settings...", lambda icon, item: webbrowser.open(settings_url)),
         pystray.MenuItem("Copy overlay URL", copy),
+        *([pystray.MenuItem("Restart", lambda icon, item: restart_cb())] if restart_cb else []),
         pystray.MenuItem("Quit", lambda icon, item: quit_cb()),
     )
     icon = pystray.Icon("chatreader", _image(), _tooltip(controller), menu)

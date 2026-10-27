@@ -6,7 +6,7 @@ from dataclasses import replace
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from chatreader import startup, tray
+from chatreader import restart, startup, tray
 from chatreader.config import Config, load_config, save_config
 from chatreader.controller import Controller
 from chatreader.events import EventLog, LogMirror
@@ -61,6 +61,26 @@ def make_toggle(controller, apply_config=None):
     return toggle
 
 
+def make_control(controller, get_icon, relaunch=restart.relaunch):
+    """The /api/control and tray callback: quit and restart act on the tray icon, the rest on the controller."""
+    log = logging.getLogger("chatreader")
+
+    def control(action: str) -> None:
+        if action == "quit":
+            get_icon().stop()
+        elif action == "restart":
+            try:
+                relaunch()
+            except Exception:
+                log.exception("restart failed")  # keep running: a failed restart must not close the app
+                return
+            get_icon().stop()
+        else:
+            getattr(controller, action)()
+
+    return control
+
+
 def _install_excepthooks() -> None:
     log = logging.getLogger("chatreader")
     sys.excepthook = lambda *exc: log.error("uncaught exception", exc_info=exc)
@@ -107,7 +127,8 @@ def main(home: str | None = None) -> None:
 
     base = f"http://127.0.0.1:{cfg.port}"
     stop_server = lambda: None  # noqa: E731
-    icon = tray.build_icon(controller, f"{base}/settings", f"{base}/overlay", lambda: icon.stop())
+    control = make_control(controller, lambda: icon)
+    icon = tray.build_icon(controller, f"{base}/settings", f"{base}/overlay", lambda: control("quit"), lambda: control("restart"))
     icon_ref.append(icon)
 
     def boot(icon) -> None:
@@ -116,7 +137,7 @@ def main(home: str | None = None) -> None:
         try:
             app_obj = create_app(
                 lambda: controller.cfg, apply_config, hub, controller.speak_test,
-                controller.snapshot, lambda a: icon.stop() if a == "quit" else getattr(controller, a)(),
+                controller.snapshot, control,
                 queue=player, events=events, toggle=make_toggle(controller, apply_config), voices=tts.voices,
                 view=view, themes_dir=app / "themes",
             )

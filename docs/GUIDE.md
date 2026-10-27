@@ -108,7 +108,7 @@ You can keep a small control panel next to your scenes, so you never leave OBS.
 
 The page has three tabs and works from a narrow dock (about 300 px) up to a full browser tab. `/` and `/settings` open the same page.
 
-- **Live**: green, amber or red status for Twitch, YouTube, the OBS overlay and the voice model; **Pause / Resume**, **Skip**, **Copy overlay URL** and **Quit** (click twice to confirm), the same as the tray menu; and the **queue**: the message being read, then those waiting. Click **×** to remove one waiting message, or **Clear all**. The one being read is ended with **Skip**.
+- **Live**: green, amber or red status for Twitch, YouTube, the OBS overlay and the voice model; **Pause / Resume**, **Skip**, **Copy overlay URL**, **Restart** (closes the app and starts it again by itself, then reloads the page) and **Quit** (click twice to confirm either one), the same as the tray menu; and the **queue**: the message being read, then those waiting. Click **×** to remove one waiting message, or **Clear all**. The one being read is ended with **Skip**.
 - **Console**: every chat message with what happened to it, plus ChatReader's own log. Outcomes: `queued` (accepted), `played`, `failed` (the voice could not make audio), `dropped` (the queue was full), `skipped` (you pressed Skip), `removed` (you removed it) and `skipped:<reason>` for filtered messages (ignored user, role, command, link, no text, repeat, duplicate, spam). Use the **All / Chat / Log** chips, **Pause scrolling**, **Clear view** and the **Debug** switch. The console is kept in memory only (the last 500 lines) and is not saved to disk.
 - **Settings**: everything in [section 6](#6-settings-explained).
 

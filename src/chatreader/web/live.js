@@ -97,6 +97,30 @@
     for (const id of ["btn-pause", "btn-skip", "btn-copy", "btn-quit", "btn-clear"]) $("#" + id).disabled = true;
   };
 
+  // Restart: the server closes and a new copy starts by itself; reload this page once it answers again.
+  let restartTimer = 0, restartArmed = false;
+  $("#btn-restart").onclick = async () => {
+    const b = $("#btn-restart");
+    if (!restartArmed) {
+      restartArmed = true; b.textContent = "Really restart?"; b.classList.add("armed");
+      restartTimer = setTimeout(() => { restartArmed = false; b.textContent = "Restart"; b.classList.remove("armed"); }, 4000);
+      return;
+    }
+    clearTimeout(restartTimer);
+    try { await api("/api/control", { body: { action: "restart" } }); } catch { /* the server may die before answering */ }
+    for (const id of ["btn-pause", "btn-skip", "btn-copy", "btn-restart", "btn-quit", "btn-clear"]) $("#" + id).disabled = true;
+    say("Restarting ChatReader… this page reloads when it is back.");
+    let down = false;
+    for (let i = 0; i < 90; i++) {
+      await new Promise((r) => setTimeout(r, 1000));
+      try {
+        const r = await fetch("/api/status", { cache: "no-store" });
+        if (r.ok && down) { location.reload(); return; }
+      } catch { down = true; }
+    }
+    say("ChatReader did not come back. Start it again from the Start menu or your shortcut.");
+  };
+
   App.poll(loadQueue, 1000);
   App.onTab((t) => { if (t === "live") loadQueue().catch(() => {}); });
 })();

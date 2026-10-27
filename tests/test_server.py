@@ -329,7 +329,7 @@ def test_live_panel_has_controls(env):
     client, *_ = env
     body = client.get("/").text
     _ids(body, ("st-twitch", "st-youtube", "st-overlay", "st-model", "btn-pause", "btn-skip", "btn-copy",
-                "btn-quit", "queue-list", "btn-clear"))
+                "btn-restart", "btn-quit", "queue-list", "btn-clear"))
     assert 'src="/static/live.js"' in body
 
 
@@ -446,6 +446,18 @@ def test_quit_calls_control_after_response(cc):
     client, *_, actions = cc
     assert client.post("/api/control", json={"action": "quit"}).json() == {"ok": True}
     assert actions == ["quit"]
+
+
+def test_restart_calls_control_after_response(cc):
+    client, *_, actions = cc
+    assert client.post("/api/control", json={"action": "restart"}).json() == {"ok": True}
+    assert actions == ["restart"]
+
+
+def test_control_rejects_unknown_actions_and_names_restart(cc):
+    client, *_, actions = cc
+    r = client.post("/api/control", json={"action": "reboot"})
+    assert r.status_code == 422 and "restart" in r.json()["errors"][0] and actions == []
 
 
 def test_new_routes_503_without_deps(env):

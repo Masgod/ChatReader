@@ -317,9 +317,9 @@ def create_app(
     async def post_control(request: Request, background: BackgroundTasks):
         body = await json_body(request)
         action = body.get("action") if body else None
-        if action not in ("pause", "resume", "skip", "quit"):
-            return JSONResponse({"errors": ["action must be pause, resume, skip or quit"]}, status_code=422)
-        if action == "quit":
+        if action not in ("pause", "resume", "skip", "restart", "quit"):
+            return JSONResponse({"errors": ["action must be pause, resume, skip, restart or quit"]}, status_code=422)
+        if action in ("quit", "restart"):
             background.add_task(control, action)  # runs after the response is sent
         else:
             await asyncio.to_thread(control, action)  # skip waits on the overlay socket; keep the loop free

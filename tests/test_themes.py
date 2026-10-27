@@ -88,6 +88,25 @@ def test_portrait_size_out_of_range_or_wrong_type_is_rejected(tmp_path, key, val
         load_theme(make(tmp_path, f"[bubble]\n{key} = {value}", heroes=()), "heroes_theme")
 
 
+def test_sender_colors_default_to_white_with_a_black_outline():
+    assert load_named(None, "default")["sender"] == {"color": "#ffffff", "outline": "#000000"}
+
+
+def test_sender_colors_can_be_set_by_the_theme(tmp_path):
+    t = load_theme(make(tmp_path, '[sender]\ncolor = "#ffefd7"\noutline = "#102030"', heroes=()), "heroes_theme")
+    assert t["sender"] == {"color": "#ffefd7", "outline": "#102030"}
+
+
+@pytest.mark.parametrize("toml,fragment", [
+    ('[sender]\ncolor = "white"', "sender.color"),
+    ("[sender]\noutline = 5", "sender.outline"),
+    ("sender = 3", "table"),
+])
+def test_bad_sender_colors_are_rejected(tmp_path, toml, fragment):
+    with pytest.raises(ThemeError, match=fragment):
+        load_theme(make(tmp_path, toml, heroes=()), "heroes_theme")
+
+
 def test_builtin_default_is_valid_and_has_no_heroes():
     t = load_named(None, "default")
     assert t["heroes"] == [] and t["bubble"]["animation"] == "slide"
