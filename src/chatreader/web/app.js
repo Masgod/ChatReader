@@ -107,6 +107,15 @@
     $("#status-text").textContent = (s.paused ? "paused · " : "") + text + (s.queue ? " · " + s.queue + " waiting" : "");
   }
 
+  const uiButtons = document.querySelectorAll("button[data-ui]");
+  const markUi = () => uiButtons.forEach((b) => b.setAttribute("aria-pressed", b.dataset.ui === document.documentElement.dataset.ui));
+  uiButtons.forEach((b) => b.onclick = () => {
+    document.documentElement.dataset.ui = b.dataset.ui;
+    try { localStorage.setItem("ui", b.dataset.ui); } catch { /* private window: the choice lasts until the page closes */ }
+    markUi();
+  });
+  markUi();
+
   showTab(initialTab(), true);
   App.poll(async () => {
     const s = await App.api("/api/status");

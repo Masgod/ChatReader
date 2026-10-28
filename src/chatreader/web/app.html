@@ -5,6 +5,11 @@
 <title>ChatReader</title>
 <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/static/app.css">
+<script>
+  // Style is chosen per device (Settings > System); set before first paint so the page never flashes the other one.
+  try { var ui = localStorage.getItem("ui"); } catch (e) {}
+  document.documentElement.dataset.ui = ui === "mouse" ? "mouse" : "touch";
+</script>
 
 <header class="top">
   <img class="logo" src="/static/icon.svg" alt="" width="26" height="26">
@@ -291,6 +296,13 @@
     <details class="sect" open>
       <summary><h2>System</h2></summary>
       <div class="card">
+        <div class="row grid">
+          <div><div class="name" id="l-ui">Style</div><div class="hint">Touch has big buttons, Mouse is compact · this device only</div></div>
+          <div class="roles" role="group" aria-labelledby="l-ui">
+            <button type="button" class="pill" data-ui="touch">Touch</button>
+            <button type="button" class="pill" data-ui="mouse">Mouse</button>
+          </div>
+        </div>
         <label class="row">
           <div class="txt"><div class="name">Port</div><div class="hint" id="port-hint">Local server · restart required to change</div></div>
           <div class="field"><input type="text" id="port" inputmode="numeric" aria-label="Port"></div>

@@ -142,6 +142,49 @@ input[type=range] { width: 100%; accent-color: var(--acc); }
 #msg { font-size: 13px; color: var(--faint); }
 #msg.dirty { color: var(--acc); } #msg.ok { color: var(--ok); } #msg.bad { color: var(--err); }
 
+/* touch style (default): 44px+ targets, one column in settings, 16px text. Mouse style is everything above. */
+html[data-ui=touch] body { font-size: 16px; -webkit-tap-highlight-color: transparent; }
+html[data-ui=touch] button, html[data-ui=touch] summary { touch-action: manipulation; user-select: none; }
+html[data-ui=touch] .tabs button { min-height: 52px; font-size: 16px; }
+html[data-ui=touch] .btn { min-height: 52px; padding: 12px 18px; border-radius: 12px; }
+html[data-ui=touch] .btn.small { min-height: 44px; padding: 8px 14px; font-size: 14px; }
+html[data-ui=touch] .btns { gap: 12px; }
+html[data-ui=touch] .btns .btn { flex: 1 1 120px; min-height: 64px; }
+html[data-ui=touch] .srow { padding: 14px 16px; }
+html[data-ui=touch] .state, html[data-ui=touch] .queue .who { font-size: 14px; }
+html[data-ui=touch] .queue li { padding: 12px 16px; }
+html[data-ui=touch] .queue .x { width: 44px; height: 44px; font-size: 22px; }
+html[data-ui=touch] .pill { min-height: 44px; padding: 10px 18px; font-size: 15px; }
+html[data-ui=touch] .roles, html[data-ui=touch] .chips-row { gap: 8px; }
+html[data-ui=touch] .sw { width: 56px; height: 32px; border-radius: 16px; }
+html[data-ui=touch] .sw::after { width: 28px; height: 28px; }
+html[data-ui=touch] .console { font-size: 14px; }
+html[data-ui=touch] .line { padding: 6px 12px; }
+html[data-ui=touch] .jump { bottom: 16px; }
+html[data-ui=touch] .sect > summary { padding: 12px 0; }
+html[data-ui=touch] .row { padding: 16px; }
+html[data-ui=touch] .row.grid { grid-template-columns: 1fr; gap: 10px; }
+html[data-ui=touch] input[type=text], html[data-ui=touch] select { padding: 13px 14px; font-size: 16px; }
+html[data-ui=touch] .step button { width: 52px; height: 52px; font-size: 22px; }
+html[data-ui=touch] .step input { width: 72px; font-size: 18px; }
+html[data-ui=touch] #port { width: 110px; }
+html[data-ui=touch] .chip { padding: 6px 6px 6px 14px; font-size: 15px; }
+html[data-ui=touch] .chip button { width: 32px; height: 32px; font-size: 18px; }
+html[data-ui=touch] input[type=range] { -webkit-appearance: none; appearance: none; height: 44px; background: transparent; }
+html[data-ui=touch] input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: var(--line2); }
+html[data-ui=touch] input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 32px; height: 32px; margin-top: -12px; border-radius: 50%; background: var(--acc); border: 0; }
+html[data-ui=touch] .savebar { padding: 12px 0; gap: 12px; }
+html[data-ui=touch] .savebar .btn { min-width: 120px; }
+
+@media (min-width: 640px) {
+  html[data-ui=touch] .live-cols { grid-template-columns: minmax(280px, 2fr) 3fr; }  /* wide docks fit both columns */
+}
+@media (max-height: 520px) {  /* a short OBS dock: keep the touch sizes but spend less height on chrome */
+  html[data-ui=touch] .tabs button { min-height: 44px; }
+  html[data-ui=touch] .srow { padding: 8px 16px; }
+  html[data-ui=touch] .btns .btn { min-height: 52px; }
+  html[data-ui=touch] .savebar { padding: 8px 0; }
+}
 @media (min-width: 800px) {
   .live-cols { grid-template-columns: minmax(280px, 2fr) 3fr; }
 }

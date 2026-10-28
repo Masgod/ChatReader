@@ -192,6 +192,7 @@ ChatReader also starts speaking a long message after its first sentence is ready
 Bots and people you never want read. Type a name and press **Add**, or click **×** on a chip to remove it. Names are not case sensitive, and a leading `@` is ignored. You can add several at once separated by spaces or commas. Common bots (nightbot, streamelements, streamlabs, moobot) are there by default.
 
 ### System
+- **Style**: Touch (the default) has big buttons and one column in Settings, made for a tablet, a phone or a touch screen; Mouse is the compact layout. It is remembered per device and browser (an OBS dock keeps its own), not in `config.toml`.
 - **Port**: the local port. Leave it unless something else uses 8765. Changing it needs a restart, and you must update the OBS URL.
 - **Start with Windows**: starts ChatReader when you sign in (adds a shortcut to your Startup folder).
 - **Debug**: writes more detail to the log file. Leave it off normally.
