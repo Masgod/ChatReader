@@ -40,7 +40,7 @@ The build is not signed, so Windows may warn; the [guide](docs/GUIDE.md#1-instal
 
 ## Status
 
-Early version (0.2.0). The automated tests pass and live Twitch chat has been tested. YouTube live chat reads the public page, so it can break when YouTube changes; it has not been tested live yet. Details and known limits: [Status](docs/STATUS.md).
+Early version (0.3.0). The automated tests pass and live Twitch chat reading has been tested. Chat replies (`!hero`, `!random`) and the touch layout still need a live check, see Status. YouTube live chat reads the public page, so it can break when YouTube changes; it has not been tested live yet. Details and known limits: [Status](docs/STATUS.md).
 
 ## License
 
