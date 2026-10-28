@@ -26,7 +26,7 @@ The unchecked items need live chat, OBS and a running game.
 - [ ] Pause, Skip and Quit work from the tray.
 - [ ] The chat overlay in OBS: a bubble appears when the voice starts for Twitch and for YouTube chat, and none for filtered messages.
 - [ ] CPU use while a game runs: ______ %
-- [ ] Twitch chat replies: Connect Twitch (device code), then `!hero`, `!random`, `!hero <name>` in the streamer's own chat; revoke the app and check chat reading keeps working.
+- [x] Twitch chat replies (tested by the author): Connect Twitch (device code), then `!hero`, `!random`, `!hero <name>` in the streamer's own chat; revoke the app and check chat reading keeps working.
 - [ ] The Restart button and tray item relaunch the app once, on the same port.
 - [ ] The Touch layout (4 big buttons, submenus, one page at a time) in a real OBS dock and on a phone.
 - [ ] The built zip starts on a machine without Python and serves every page.
