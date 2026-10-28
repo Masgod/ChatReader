@@ -1,6 +1,8 @@
 """Sends chat messages as the streamer's own Twitch account (device-code login, no password or token typed in)."""
 import json
 import logging
+import os
+import subprocess
 import threading
 import time
 import urllib.error
@@ -45,9 +47,20 @@ def _http(method: str, url: str, headers=None, form=None, body=None) -> tuple[in
     return status, parsed if isinstance(parsed, dict) else {}
 
 
+def _lock_down(path: Path) -> None:
+    """Leave only the current user able to read the token file."""
+    if os.name != "nt":
+        os.chmod(path, 0o600)
+        return
+    subprocess.run(["icacls", str(path), "/inheritance:r", "/grant:r", f"{os.environ['USERNAME']}:F"],
+                   check=True, capture_output=True, timeout=TIMEOUT, creationflags=0x08000000)  # no console flash
+
+
 class TwitchChat:
-    def __init__(self, token_path: Path, http: Callable = _http, sleep: Callable[[float], None] = time.sleep):
+    def __init__(self, token_path: Path, http: Callable = _http, sleep: Callable[[float], None] = time.sleep,
+                 lock_down: Callable[[Path], None] = _lock_down):
         self._path = token_path
+        self._lock_down = lock_down
         self._http = http
         self._sleep = sleep
         self._lock = threading.Lock()
@@ -113,7 +126,12 @@ class TwitchChat:
                 status, body = self._helix("POST", "/chat/messages", client_id, body=message)
                 if status != 200:
                     log.warning("twitch: message not sent (%s: %s)", status, body.get("message", ""))
-                return status == 200
+                    return False
+                sent = (body.get("data") or [{}])[0]
+                if sent.get("is_sent") is False:  # Twitch answers 200 even when it drops the message (AutoMod, rules)
+                    log.warning("twitch: message dropped (%s)", (sent.get("drop_reason") or {}).get("code", "unknown"))
+                    return False
+                return True
         except Exception:
             log.exception("twitch: message not sent")
             return False
@@ -151,3 +169,8 @@ class TwitchChat:
             self._path.write_text(json.dumps(tok), encoding="utf-8")
         except OSError:
             log.exception("could not save %s", self._path)
+            return
+        try:
+            self._lock_down(self._path)
+        except Exception:  # best effort: a login that works is worth more than a perfect ACL
+            log.warning("could not restrict %s to the current user", self._path, exc_info=True)

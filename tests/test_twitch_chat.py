@@ -126,6 +126,30 @@ def test_send_failure_returns_false_and_never_raises(tmp_path):
     assert chat3.send(CID, "masgod", "hi") is False
 
 
+def test_a_200_with_is_sent_false_counts_as_not_sent(tmp_path, caplog):
+    connected(tmp_path)
+    held = {"data": [{"message_id": "", "is_sent": False, "drop_reason": {"code": "automod_held", "message": "held for review"}}]}
+    chat, _ = make(tmp_path, (200, {"data": [{"id": "777"}]}), (200, held))
+    assert chat.send(CID, "masgod", "hi") is False
+    assert "automod_held" in caplog.text
+
+
+def test_the_token_file_is_locked_down_after_every_save(tmp_path):
+    locked = []
+    chat = TwitchChat(tmp_path / "t.json", http=FakeHttp(), sleep=lambda s: None, lock_down=locked.append)
+    chat._store({"access_token": "a"})
+    assert locked == [tmp_path / "t.json"] and (tmp_path / "t.json").exists()
+
+
+def test_a_failing_lock_down_does_not_lose_the_login(tmp_path):
+    def boom(path):
+        raise OSError("icacls missing")
+
+    chat = TwitchChat(tmp_path / "t.json", http=FakeHttp(), sleep=lambda s: None, lock_down=boom)
+    chat._store({"access_token": "a"})
+    assert json.loads((tmp_path / "t.json").read_text("utf-8"))["access_token"] == "a"
+
+
 def test_message_is_cut_to_the_twitch_limit(tmp_path):
     connected(tmp_path)
     chat, http = make(tmp_path, (200, {"data": [{"id": "1"}]}), (200, {}))
