@@ -9,14 +9,24 @@
   // Style is chosen per device (Settings > System); set before first paint so the page never flashes the other one.
   try { var ui = localStorage.getItem("ui"); } catch (e) {}
   document.documentElement.dataset.ui = ui === "mouse" ? "mouse" : "touch";
+  document.documentElement.dataset.view = "home";  // touch style starts on the 4 big buttons
 </script>
 
 <header class="top">
+  <button type="button" id="back" aria-label="Back" hidden>‹</button>
   <img class="logo" src="/static/icon.svg" alt="" width="26" height="26">
-  <h1>ChatReader</h1>
+  <h1 id="title">ChatReader</h1>
   <div id="status"><span id="dot"></span><span id="status-text">loading…</span></div>
 </header>
 <div id="banner" role="alert" hidden>ChatReader not reachable</div>
+
+<nav id="home" aria-label="Menu">
+  <button type="button" class="tile" data-group="live"><span class="ico" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><span><b>Live</b><small>Queue, controls, console</small></span></button>
+  <button type="button" class="tile" data-group="sources"><span class="ico" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1a10 10 0 0 1 0-14.2M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4M19.1 4.9a10 10 0 0 1 0 14.2M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg></span><span><b>Sources</b><small>Twitch, YouTube, replies</small></span></button>
+  <button type="button" class="tile" data-group="voice"><span class="ico" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg></span><span><b>Voice</b><small>Voices, reading, events</small></span></button>
+  <button type="button" class="tile" data-group="system"><span class="ico" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span><span><b>Overlay &amp; system</b><small>Chat overlay, style, app</small></span></button>
+</nav>
+<nav id="subs" aria-label="Submenu"></nav>
 
 <nav class="tabs" role="tablist" aria-label="Sections">
   <button type="button" role="tab" id="tab-live" aria-controls="panel-live" data-tab="live">Live</button>
@@ -84,7 +94,7 @@
       </ul>
     </div>
 
-    <details class="sect" open>
+    <details class="sect" id="sect-sources" open>
       <summary><h2>Sources</h2></summary>
       <div class="card">
         <label class="row grid">
@@ -128,7 +138,7 @@
       </div>
     </details>
 
-    <details class="sect" open>
+    <details class="sect" id="sect-voices" open>
       <summary><h2>Voices</h2></summary>
       <div class="card">
         <div class="row grid">
@@ -147,7 +157,7 @@
       </div>
     </details>
 
-    <details class="sect" open>
+    <details class="sect" id="sect-events" open>
       <summary><h2>Events</h2></summary>
       <div class="card">
         <div class="row">
@@ -176,7 +186,7 @@
       </div>
     </details>
 
-    <details class="sect" open>
+    <details class="sect" id="sect-reading" open>
       <summary><h2>Reading</h2></summary>
       <div class="card">
         <div class="row">
@@ -226,7 +236,7 @@
       </div>
     </details>
 
-    <details class="sect" open>
+    <details class="sect" id="sect-overlay" open>
       <summary><h2>Chat overlay</h2></summary>
       <div class="card">
         <div class="row grid">
@@ -282,7 +292,7 @@
       </div>
     </details>
 
-    <details class="sect" open>
+    <details class="sect" id="sect-ignored" open>
       <summary><h2>Ignored users <small id="ignored-count"></small></h2></summary>
       <div class="card pad">
         <div class="chips" id="chips"></div>
@@ -293,7 +303,7 @@
       </div>
     </details>
 
-    <details class="sect" open>
+    <details class="sect" id="sect-system" open>
       <summary><h2>System</h2></summary>
       <div class="card">
         <div class="row grid">
@@ -337,6 +347,7 @@
 </main>
 
 <script src="/static/app.js"></script>
+<script src="/static/touchnav.js"></script>
 <script src="/static/live.js"></script>
 <script src="/static/console.js"></script>
 <script src="/static/settings.js"></script>

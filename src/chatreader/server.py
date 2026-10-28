@@ -158,6 +158,7 @@ _STATIC = {
     "live.js": "text/javascript",
     "console.js": "text/javascript",
     "settings.js": "text/javascript",
+    "touchnav.js": "text/javascript",
     "icon.svg": "image/svg+xml",
     "chat-overlay.js": "text/javascript",
     "chat-overlay.css": "text/css",
