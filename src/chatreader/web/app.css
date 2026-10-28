@@ -214,6 +214,12 @@ html[data-ui=touch] .sect > summary { position: absolute; width: 1px; height: 1p
   html[data-ui=touch] #home { min-height: calc(100vh - 56px); padding: 8px 12px; gap: 8px; }
   html[data-ui=touch] .sub { min-height: 56px; }
 }
+/* language pickers: wrapping pills instead of a scrolling segmented strip, so every language is reachable on a narrow screen */
+html[data-ui=touch] .seg { width: auto; padding: 0; gap: 8px; flex-wrap: wrap; background: none; border: 0; }
+html[data-ui=touch] .seg button { flex: 1 1 auto; min-height: 48px; padding: 0 18px; font-size: 16px; background: var(--chip); border: 1px solid var(--line2); border-radius: 12px; }
+html[data-ui=touch] .seg button[aria-pressed=true] { background: #3a2f1c; border-color: var(--acc); color: var(--text); }
+html[data-ui=touch] [data-voice-row] .hint { display: none; }  /* "Kokoro voice" on every row is noise */
+html[data-ui=touch] [data-voice-row] .btn.icon { width: 52px; }
 @media (min-width: 800px) {
   .live-cols { grid-template-columns: minmax(280px, 2fr) 3fr; }
 }

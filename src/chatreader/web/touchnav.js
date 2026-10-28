@@ -26,7 +26,10 @@
 
   function open(p) {
     App.showTab(p.tab);
-    $$(".sect").forEach((s) => s.classList.toggle("cur", s.id === p.sect));
+    $$(".sect").forEach((s) => {
+      s.classList.toggle("cur", s.id === p.sect);
+      if (s.id === p.sect) s.open = true;  // settings.js folds every section but the first on narrow screens
+    });
     show("page", p.label);
   }
 

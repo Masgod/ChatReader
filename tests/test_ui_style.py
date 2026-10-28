@@ -26,6 +26,12 @@ def test_touch_home_has_four_buttons_and_every_page_target_exists():
         assert f'id="sect-{sect}"' in html and f"sect-{sect}" in js  # a renamed section must not leave a dead menu entry
 
 
+def test_touch_page_opens_its_section_because_narrow_screens_fold_them():
+    with _client() as c:
+        js = c.get("/static/touchnav.js").text
+    assert "s.open = true" in js
+
+
 def test_touch_menu_is_hidden_in_mouse_style_and_the_tabs_are_hidden_in_touch():
     with _client() as c:
         css = c.get("/static/app.css").text
