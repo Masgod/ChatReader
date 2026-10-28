@@ -59,6 +59,16 @@ class HeroPicker:
             self._save()
             return new
 
+    def choose(self, platform: str, user: str, slot: int, cfg: Config) -> bool:
+        """Give the viewer a chosen hero; counts as a `!random` for the waits. False while a wait is running."""
+        key = self._key(platform, user)
+        with self._lock:
+            if not self._pass("random", key, cfg):
+                return False
+            self._slots[key] = slot
+            self._save()
+            return True
+
     def may_ask(self, platform: str, user: str, cfg: Config) -> bool:
         """Whether a `!hero` question is allowed now; same waits as `!random`, counted separately."""
         with self._lock:

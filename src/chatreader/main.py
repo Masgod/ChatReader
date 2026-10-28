@@ -16,7 +16,7 @@ from chatreader.player import Player
 from chatreader.server import Hub, ViewHub, create_app, run_server
 from chatreader.sources.twitch import run_twitch
 from chatreader.sources.youtube import run_youtube
-from chatreader.themes import hero_name
+from chatreader.themes import hero_name, hero_slot
 from chatreader.tts import KokoroTTS, ensure_models
 from chatreader.twitch_chat import TwitchChat
 
@@ -121,6 +121,7 @@ def main(home: str | None = None) -> None:
     controller = Controller(
         cfg, None, tts, {"twitch": run_twitch, "youtube": run_youtube}, events, HeroPicker(app / "viewer_heroes.json"),
         reply=reply, hero_name=lambda slot: hero_name(app / "themes", controller.cfg.overlay_theme, slot),
+        hero_slot=lambda wanted: hero_slot(app / "themes", controller.cfg.overlay_theme, wanted),
     )
     view = ViewHub()
 

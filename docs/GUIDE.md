@@ -103,7 +103,7 @@ A theme with a mistake is listed as not usable in Settings, and the overlay show
 
 A viewer who types `!random` in chat gets a new random hero, and keeps it: the choice is saved in `viewer_heroes.json` in the app folder, so it survives restarts. The command is never read aloud. To stop people spamming it, each use makes the next wait longer: a viewer waits 10 s after the first use, then 20 s, 40 s and so on up to 5 minutes, and the whole chat shares a similar wait (2 s up to 60 s). After a quiet minute the waits start over. A `!random` sent too early is ignored. The four wait values are in `config.toml` (`random_*`, see CONFIGURATION.md). Delete a viewer's line in `viewer_heroes.json` (with ChatReader closed) to give them their original hero back.
 
-`!hero` tells a viewer which hero they have now (it uses the same waits, counted on its own).
+`!hero` tells a viewer which hero they have now (it uses the same waits, counted on its own). `!hero wraith` or `!hero grey talon` picks that hero from the active theme (upper or lower case, spaces or `_` all work) and counts as a `!random` for the waits. A name the theme doesn't have gets the answer `herói não encontrado` (at most as often as `!hero` alone) and costs no wait.
 
 #### Answering in your Twitch chat (optional)
 

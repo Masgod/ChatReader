@@ -190,6 +190,16 @@ def load_named(user_dir: Path | None, name: str) -> dict:
     return load_theme(folder, name)
 
 
+def hero_slot(user_dir: Path | None, name: str, wanted: str) -> int | None:
+    """A slot that lands on the hero a viewer typed (case, spaces, `_` and `-` don't matter), or None."""
+    try:
+        heroes = load_named(user_dir, name)["heroes"]
+    except ThemeError:
+        return None
+    key = re.sub(r"[\s_-]+", "_", wanted.strip().casefold())
+    return next((i for i, h in enumerate(heroes) if re.sub(r"[\s_-]+", "_", h["name"].casefold()) == key), None) if key else None
+
+
 def hero_name(user_dir: Path | None, name: str, slot: int) -> str | None:
     """The hero a viewer's slot lands on, by the same `heroes[slot % n]` rule the chat overlay page uses."""
     try:

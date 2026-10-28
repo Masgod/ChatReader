@@ -525,6 +525,37 @@ def test_no_reply_for_youtube_or_a_blocked_random(tmp_path):
     assert sent == ["@alice agora é Hero5"]
 
 
+def _choosing(tmp_path):
+    c, sent, events = _replying(tmp_path)
+    table = {"wraith": 2, "grey talon": 1}
+    c._hero_slot = lambda name: table.get(name.lower())
+    c._hero_name = lambda slot: {2: "Wraith", 1: "Grey Talon"}.get(slot, f"Hero{slot}")
+    return c, sent, events
+
+
+def test_hero_with_a_name_swaps_the_hero_and_replies(tmp_path):
+    c, sent, events = _choosing(tmp_path)
+    c.on_msg(Msg("twitch", "alice", "!hero Grey Talon", 0.0))
+    assert sent == ["@alice agora é Grey Talon"]
+    assert c._heroes.slot("twitch", "alice") == 1
+    assert _outcome_names(events) == ["command:hero"]
+
+
+def test_hero_with_an_unknown_name_says_so_without_using_the_wait(tmp_path):
+    c, sent, events = _choosing(tmp_path)
+    c.on_msg(Msg("twitch", "alice", "!hero nobody", 0.0))
+    c.on_msg(Msg("twitch", "alice", "!hero wraith", 1.0))  # the typo did not start the swap wait
+    assert sent == ["@alice herói não encontrado", "@alice agora é Wraith"] and c._heroes.slot("twitch", "alice") == 2
+
+
+def test_hero_swap_on_cooldown_is_dropped_quietly(tmp_path):
+    c, sent, events = _choosing(tmp_path)
+    c.on_msg(Msg("twitch", "alice", "!hero wraith", 0.0))
+    c.on_msg(Msg("twitch", "alice", "!hero grey talon", 1.0))
+    assert sent == ["@alice agora é Wraith"] and c._heroes.slot("twitch", "alice") == 2
+    assert _outcome_names(events) == ["command:hero", "skipped:command"]
+
+
 def test_no_reply_when_the_hero_has_no_name(tmp_path):
     c, sent, _ = _replying(tmp_path)
     c._hero_name = lambda slot: None
