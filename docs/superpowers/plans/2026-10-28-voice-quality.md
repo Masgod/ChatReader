@@ -58,9 +58,9 @@
 
 Why on by default: different Kokoro voices come out at different levels, and a streamer cannot fix that per voice in OBS. A single RMS target with a gain cap changes the level but not the sound; it can be turned off.
 
-- [ ] **Step 1: Write the tests.** Quiet clip (RMS 0.02) rises toward the target but by no more than `max_gain`; loud clip (RMS 0.3) is lowered to the target; all-zero clip and a 1-sample clip come back unchanged with no warning; output peak never exceeds `peak`; output dtype is float32. Add one test that `synth` calls it only when `normalize_volume` is true (inject a fake Kokoro that returns known samples). Run `uv run pytest -q tests/test_tts.py`. Expected: FAIL.
-- [ ] **Step 2: Implement `normalize_loudness` and call it in `synth` before the int16 conversion** when `self._normalize` is set (read in `__init__` and in `reload(cfg)`, like `speed`). Gain = `min(target_rms / rms, max_gain)`; then scale down if the peak would pass `peak`. Run the suite.
-- [ ] **Step 3: Config field, a switch in the Reading page ("Even out voice volume"), docs.** Look at the page in the browser pane.
+- [x] **Step 1: Write the tests.** Quiet clip (RMS 0.02) rises toward the target but by no more than `max_gain`; loud clip (RMS 0.3) is lowered to the target; all-zero clip and a 1-sample clip come back unchanged with no warning; output peak never exceeds `peak`; output dtype is float32. Add one test that `synth` calls it only when `normalize_volume` is true (inject a fake Kokoro that returns known samples). Run `uv run pytest -q tests/test_tts.py`. Expected: FAIL. _(done, voice/task-2-loudness f4634c1)_
+- [x] **Step 2: Implement `normalize_loudness` and call it in `synth` before the int16 conversion** when `self._normalize` is set (read in `__init__` and in `reload(cfg)`, like `speed`). Gain = `min(target_rms / rms, max_gain)`; then scale down if the peak would pass `peak`. Run the suite. _(done, voice/task-2-loudness f4634c1)_
+- [x] **Step 3: Config field, a switch in the Reading page ("Even out voice volume"), docs.** Look at the page in the browser pane. _(done, voice/task-2-loudness f4634c1)_
 - [ ] **Step 4 (owner): listen.** With the real model, send the same sentence in three different voices with the switch off and on. Expected: similar loudness on, noticeably different off. If the quiet voices turn into hiss, lower `max_gain` and say so in the commit.
 - [ ] **Step 5: Commit** `feat: even out voice volume`.
 
