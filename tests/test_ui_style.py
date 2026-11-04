@@ -44,3 +44,12 @@ def test_touch_rules_exist_and_the_mouse_style_has_none():
         css = c.get("/static/app.css").text
     assert "html[data-ui=touch] .btn" in css
     assert "html[data-ui=mouse]" not in css  # mouse is the base style, touch only adds
+
+
+def test_pronunciations_section_exists_and_is_in_the_touch_menu():
+    with _client() as c:
+        html = c.get("/settings").text
+        js = c.get("/static/touchnav.js").text
+        sjs = c.get("/static/settings.js").text
+    assert 'id="sect-pronunciations"' in html and "sect-pronunciations" in js
+    assert "pronunciations" in sjs

@@ -561,3 +561,22 @@ def test_no_reply_when_the_hero_has_no_name(tmp_path):
     c._hero_name = lambda slot: None
     c.on_msg(Msg("twitch", "alice", "!hero", 0.0))
     assert sent == []
+
+
+def test_pronunciations_apply_to_the_spoken_text_not_the_overlay_text():
+    c, player, *_ = make(Config(twitch_channel="chan", youtube_video_id="", announce_user=False, pronunciations={"valorant": "valo rant"}))
+    c.on_msg(Msg("twitch", "alice", "eu gostei muito disso valorant", 0.0))
+    assert player.submitted[0][0] == "eu gostei muito disso valo rant"
+    assert player.views[0]["text"] == "eu gostei muito disso valorant"
+
+
+def test_announced_user_name_is_covered_by_the_rules():
+    c, player, *_ = make(Config(twitch_channel="chan", youtube_video_id="", pronunciations={"alice": "alis"}))
+    c.on_msg(Msg("twitch", "alice", "eu gostei muito dessa jogada", 0.0))
+    assert player.submitted[0][0].startswith("alis disse:")
+
+
+def test_the_test_button_goes_through_the_rules():
+    c, player, *_ = make(Config(twitch_channel="chan", youtube_video_id="", pronunciations={"valorant": "valo"}))
+    c.speak_test("hello valorant my friends")
+    assert player.submitted == [("hello valo my friends", "en")]

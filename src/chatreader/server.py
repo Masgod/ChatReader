@@ -208,6 +208,9 @@ def _type_errors(body) -> list[str]:
         v = body.get(f.name)
         if f.name not in body:
             errors.append(f"{f.name} is required")
+        elif isinstance(default, dict):
+            if not same_type(v, default):
+                errors.append(f"{f.name} must be an object of strings")
         elif isinstance(default, list):
             if not isinstance(v, list) or not all(isinstance(x, str) for x in v):
                 errors.append(f"{f.name} must be a list of strings")
