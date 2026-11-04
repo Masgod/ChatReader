@@ -191,6 +191,9 @@ ChatReader also starts speaking a long message after its first sentence is ready
 ### Ignored users
 Bots and people you never want read. Type a name and press **Add**, or click **×** on a chip to remove it. Names are not case sensitive, and a leading `@` is ignored. You can add several at once separated by spaces or commas. Common bots (nightbot, streamelements, streamlabs, moobot) are there by default.
 
+### Pronunciations
+Make the voice say a word your way: type the word (for example `kekw` or a streamer's name) and how it should sound, then press **Add** and **Save**. Whole words only, upper or lower case, accents included (`Zé`), and a rule is never treated as a pattern, so `c++` means exactly `c++`. It applies to chat, to the announced user name and to **Test voice**; the chat overlay still shows what was typed. Up to 200 rules.
+
 ### System
 - **Style**: Touch (the default) opens on 4 big buttons (Live, Sources, Voice, Overlay & system); each opens a short list of pages, one page at a time, with a Back button. Made for a tablet, a phone or a touch screen. Mouse keeps the Live / Console / Settings tabs and the compact layout. Switching style returns to the start. It is remembered per device and browser (an OBS dock keeps its own), not in `config.toml`.
 - **Port**: the local port. Leave it unless something else uses 8765. Changing it needs a restart, and you must update the OBS URL.

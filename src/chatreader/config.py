@@ -16,6 +16,8 @@ VOICE_NAME_RE = re.compile(r"[a-z]{2}_[a-z0-9]+")
 YOUTUBE_RE = re.compile(r"[A-Za-z0-9_-]{11}")
 CHANNEL_RE = re.compile(r"@[A-Za-z0-9_.-]+|UC[A-Za-z0-9_-]{22}")
 CHANNEL_URL_RE = re.compile(r"youtube\.com/(?:(@[A-Za-z0-9_.-]+)|channel/(UC[A-Za-z0-9_-]{22}))")
+MAX_RULES = 200
+CONTROL_RE = re.compile(r"[\x00-\x1f\x7f-\x9f]")
 YOUTUBE_URL_RE = re.compile(r"(?:v=|youtu\.be/|/live/|/embed/)([A-Za-z0-9_-]{11})")
 
 
@@ -61,6 +63,7 @@ class Config:
     random_cooldown_max: int = 300
     random_global_base: int = 2  # same idea for the whole chat
     random_global_max: int = 60
+    pronunciations: dict[str, str] = field(default_factory=dict)  # word -> how to say it, whole words, case-insensitive
 
     def voices(self) -> dict[str, str]:
         """The voice chosen for each enabled language."""
@@ -88,6 +91,8 @@ def load_config(path: Path) -> Config:
 
 
 def same_type(v, default) -> bool:
+    if isinstance(default, dict):
+        return isinstance(v, dict) and all(isinstance(k, str) and isinstance(x, str) for k, x in v.items())
     if isinstance(default, list):
         return isinstance(v, list) and all(isinstance(x, str) for x in v)
     if isinstance(default, float):
@@ -109,7 +114,8 @@ def normalize(cfg: Config) -> Config:
     m = CHANNEL_URL_RE.search(chan)
     if m:
         chan = m.group(1) or m.group(2)
-    return Config(**{**asdict(cfg), "twitch_channel": channel, "youtube_video_id": video, "youtube_channel": chan,
+    rules = {k.strip(): v.strip() for k, v in cfg.pronunciations.items() if k.strip() and v.strip()}
+    return Config(**{**asdict(cfg), "pronunciations": rules, "twitch_channel": channel, "youtube_video_id": video, "youtube_channel": chan,
                        "twitch_client_id": cfg.twitch_client_id.strip()})
 
 
@@ -159,6 +165,12 @@ def validate(cfg: Config) -> list[str]:
         base, cap = getattr(cfg, f"random_{kind}_base"), getattr(cfg, f"random_{kind}_max")
         if not 0 <= base <= cap <= 3600:
             errors.append(f"random_{kind}_base must be between 0 and random_{kind}_max, and random_{kind}_max at most 3600")
+    if len(cfg.pronunciations) > MAX_RULES:
+        errors.append(f"pronunciations can have at most {MAX_RULES} rules")
+    for word, say in cfg.pronunciations.items():
+        if len(word) > 40 or len(say) > 80 or CONTROL_RE.search(word + say):
+            errors.append("each pronunciation needs a word up to 40 characters and a spoken form up to 80, with no control characters")
+            break
     if not 1 <= cfg.port <= 65535:
         errors.append("port must be between 1 and 65535")
     if not cfg.languages or len(set(cfg.languages)) != len(cfg.languages) or not set(cfg.languages) <= set(LANGUAGES):

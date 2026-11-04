@@ -74,3 +74,8 @@ random_global_base = 2      # whole chat, seconds
 random_global_max = 60
 # Optional: Client ID of your app at dev.twitch.tv/console, so ChatReader can answer !random and !hero in your Twitch chat.
 twitch_client_id = ""
+# Say a word your own way. Whole words, case-insensitive, up to 200 rules (word up to 40 chars, spoken form up to 80).
+# Keep this table last in the file (TOML: everything after a [table] header belongs to it).
+[pronunciations]
+# "kekw" = "kek double you"
+# "zé" = "ze"

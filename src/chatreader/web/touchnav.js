@@ -10,7 +10,7 @@
       title: "Voice",
       pages: [
         page("Voices", "settings", "sect-voices"), page("Reading", "settings", "sect-reading"),
-        page("Events", "settings", "sect-events"), page("Ignored users", "settings", "sect-ignored"),
+        page("Events", "settings", "sect-events"), page("Ignored users", "settings", "sect-ignored"), page("Pronunciations", "settings", "sect-pronunciations"),
       ],
     },
     system: { title: "Overlay & system", pages: [page("Chat overlay", "settings", "sect-overlay"), page("System", "settings", "sect-system")] },

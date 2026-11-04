@@ -106,3 +106,33 @@ def test_load_config_accepts_int_speed(tmp_path):
     path = tmp_path / "config.toml"
     path.write_text("speed = 1\n", encoding="utf-8")
     assert load_config(path).speed == 1
+
+
+def test_pronunciations_default_empty_and_round_trip(tmp_path):
+    from chatreader.config import save_config
+    assert Config().pronunciations == {}
+    p = tmp_path / "c.toml"
+    save_config(p, Config(pronunciations={"zé": "ze", "c++": "see plus plus"}))
+    assert load_config(p).pronunciations == {"zé": "ze", "c++": "see plus plus"}
+
+
+def test_pronunciations_are_trimmed_and_empty_dropped():
+    cfg = normalize(Config(pronunciations={"  kekw ": " kek ", "": "x", "y": "  "}))
+    assert cfg.pronunciations == {"kekw": "kek"}
+
+
+@pytest.mark.parametrize("rules,ok", [
+    ({f"k{i}": "v" for i in range(200)}, True),
+    ({f"k{i}": "v" for i in range(201)}, False),
+    ({"k" * 40: "v"}, True), ({"k" * 41: "v"}, False),
+    ({"k": "v" * 80}, True), ({"k": "v" * 81}, False),
+    ({"k" + chr(10): "v"}, False), ({"k": "v" + chr(7)}, False),
+])
+def test_pronunciation_limits(rules, ok):
+    assert (validate(Config(pronunciations=rules)) == []) is ok
+
+
+def test_load_config_ignores_a_pronunciations_value_of_the_wrong_type(tmp_path):
+    p = tmp_path / "c.toml"
+    p.write_text('pronunciations = "x"' + chr(10), encoding="utf-8")
+    assert load_config(p).pronunciations == {}

@@ -9,6 +9,7 @@ from chatreader.emotes import speak_emotes, strip_emotes
 from chatreader.filters import FilterState, apply, explain
 from chatreader.lang import detect_lang, spoken_text
 from chatreader.models import Msg
+from chatreader.pronounce import apply_pronunciations
 from chatreader.voices import slot_for, voice_for
 
 log = logging.getLogger(__name__)
@@ -58,7 +59,8 @@ class Controller:
                     return
             view = {"platform": msg.platform, "user": msg.user, "text": msg.text, "kind": msg.kind,
                     "detail": msg.detail, "slot": self._slot(msg), "lang": lang}
-            self._player.submit(spoken_text(spoken, lang, cfg.announce_user), lang, msg.user, voice, view)
+            text = apply_pronunciations(spoken_text(spoken, lang, cfg.announce_user), cfg.pronunciations)  # after the announcement, so names are covered
+            self._player.submit(text, lang, msg.user, voice, view)
             self._record(msg.user, msg.text, "queued")
         except Exception:
             log.exception("message dropped")
@@ -181,7 +183,7 @@ class Controller:
     def speak_test(self, text: str, lang: str = "") -> None:
         if lang not in self.cfg.languages:  # unknown or not yet saved: guess from the text
             lang = detect_lang(text, self.cfg.languages, self.cfg.default_lang)
-        self._player.submit(text, lang, "test")
+        self._player.submit(apply_pronunciations(text, self.cfg.pronunciations), lang, "test")
 
     def shutdown(self) -> None:
         with self._lock:

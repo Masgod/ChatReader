@@ -50,6 +50,16 @@
       c.append(x); return c;
     }));
     $("#ignored-count").textContent = state.ignored_users.length;
+
+    const rules = Object.entries(state.pronunciations);
+    $("#pron-chips").replaceChildren(...rules.map(([word, say]) => {
+      const c = document.createElement("div"); c.className = "chip"; c.append(word + " → " + say);
+      const x = document.createElement("button");
+      x.type = "button"; x.textContent = "×"; x.title = "Remove"; x.setAttribute("aria-label", "Remove " + word);
+      x.onclick = () => { delete state.pronunciations[word]; refresh(); };
+      c.append(x); return c;
+    }));
+    $("#pron-count").textContent = rules.length;
     $("#speed-val").textContent = Number(state.speed).toFixed(2).replace(/0$/, "") + "×";
 
     const hint = (id, changed, base) => {
@@ -225,6 +235,15 @@
     const names = input.value.split(/[\s,]+/).map((x) => x.toLowerCase().replace(/^@/, "")).filter((x) => x && !state.ignored_users.includes(x));
     if (names.length) state.ignored_users = [...state.ignored_users, ...new Set(names)];
     input.value = ""; refresh();
+  };
+
+  $("#pron-add").onsubmit = (e) => {
+    e.preventDefault();
+    const word = $("#pron-word").value.trim(), say = $("#pron-say").value.trim();
+    if (!word || !say) { flash("Fill in both the word and how to say it"); return; }
+    if (!(word in state.pronunciations) && Object.keys(state.pronunciations).length >= 200) { flash("At most 200 pronunciations"); return; }
+    state.pronunciations[word] = say;
+    $("#pron-word").value = ""; $("#pron-say").value = ""; refresh();
   };
 
   async function speak(lang) {
