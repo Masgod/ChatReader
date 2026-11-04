@@ -90,3 +90,24 @@ def test_control_quit_and_controller_actions_still_work():
     control("quit")
     control("skip")
     assert icon.stopped == 1 and ctl.calls == ["skip"]
+
+
+def test_restarted_copy_keeps_trying_for_the_lock_while_the_dying_copy_still_holds_it():
+    answers, started = iter([False, False, True]), []
+    code = run([], acquire=lambda: next(answers), open_running=lambda p: started.append("opened"), start=lambda home: started.append("start"),
+               check=lambda app: 0, wait_previous=lambda: True, sleep=lambda s: None)
+    assert code == 0 and started == ["start"]  # one new copy, not a page opened on the old one
+
+
+def test_restarted_copy_gives_up_after_the_wait_and_opens_the_running_one():
+    tries, started = [], []
+    run([], acquire=lambda: tries.append(1) or False, open_running=lambda p: started.append("opened"), start=lambda home: started.append("start"),
+        check=lambda app: 0, wait_previous=lambda: True, sleep=lambda s: None)
+    assert started == ["opened"] and len(tries) > 2
+
+
+def test_normal_second_launch_does_not_retry():
+    tries = []
+    run([], acquire=lambda: tries.append(1) or False, open_running=lambda p: None, start=lambda home: None,
+        check=lambda app: 0, wait_previous=lambda: False, sleep=lambda s: None)
+    assert len(tries) == 1

@@ -1,4 +1,5 @@
 import sys
+import time
 import tomllib
 from pathlib import Path
 
@@ -18,12 +19,18 @@ def read_port(app: Path) -> int:
 
 
 def run(argv, acquire=instance.acquire, open_running=instance.open_running, start=main.main,
-        check=selfcheck.main_check, wait_previous=restart.wait_for_previous) -> int:
+        check=selfcheck.main_check, wait_previous=restart.wait_for_previous, sleep=time.sleep) -> int:
     args = parse_args(argv)
     if args.check:  # before the single-instance test so a check works while the app runs
         return check(app_dir(args.home))
-    wait_previous()  # after a restart, the old copy still holds the lock and the port until it exits
-    if not acquire():
+    restarted = wait_previous()  # after a restart, the old copy still holds the lock and the port until it exits
+    got = acquire()
+    for _ in range(int(restart.WAIT_SECONDS * 4) if restarted else 0):  # the old copy outlived the wait: keep trying, never start two
+        if got:
+            break
+        sleep(0.25)
+        got = acquire()
+    if not got:
         open_running(read_port(app_dir(args.home)))
         return 0
     start(args.home)
