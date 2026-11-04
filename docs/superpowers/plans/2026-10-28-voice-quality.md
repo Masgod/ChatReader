@@ -70,8 +70,8 @@ Why on by default: different Kokoro voices come out at different levels, and a s
 - Modify (only if the gate passes): `src/chatreader/tts.py`, `src/chatreader/main.py`
 - Test: `tests/test_tts.py`
 
-- [ ] **Step 1: Measure.** Start the app with the model loaded and idle; record the process working set (`Get-Process ChatReader | Select WorkingSet64`); stop, start with the model not loaded (rename the model file, or the `missing` state); record again. Also time the first synth after a load. Write both numbers in `docs/STATUS.md`.
-- [ ] **Step 2: Gate.** Build it only if the saving is at least 150 MB **and** the first-message delay stays under about 2 s. Otherwise record "measured, not worth it" in STATUS and stop; this task is then done.
+- [x] **Step 1: Measure.** Start the app with the model loaded and idle; record the process working set (`Get-Process ChatReader | Select WorkingSet64`); stop, start with the model not loaded (rename the model file, or the `missing` state); record again. Also time the first synth after a load. Write both numbers in `docs/STATUS.md`. _(done, measured not worth it: 120 MB saving < 150 MB, voice/task-3-measure)_
+- [x] **Step 2: Gate.** Build it only if the saving is at least 150 MB **and** the first-message delay stays under about 2 s. Otherwise record "measured, not worth it" in STATUS and stop; this task is then done. _(done, measured not worth it: 120 MB saving < 150 MB, voice/task-3-measure)_
 - [ ] **Step 3 (only if the gate passes): write the failing tests.** After `idle_unload_minutes` with no `synth`, `_kokoro` is released and `model_state` becomes `ready` (unloaded) without breaking `voices()`; the next `synth` reloads it once, even with two threads asking at the same time; Settings still lists voices while unloaded (cache the voice list at load time). Then implement with a lock around load/unload and a timer checked from the player worker, setting `idle_unload_minutes: int = 0` (off by default).
 - [ ] **Step 4: Commit** (code or the measurement note).
 
