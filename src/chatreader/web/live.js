@@ -78,8 +78,8 @@
   $("#btn-skip").onclick = () => control("skip");
 
   $("#btn-copy").onclick = async () => {
-    const url = location.origin + "/overlay", box = $("#overlay-url");
-    try { await navigator.clipboard.writeText(url); box.hidden = true; say("Overlay URL copied"); }
+    const url = location.origin + "/stream", box = $("#overlay-url");
+    try { await navigator.clipboard.writeText(url); box.hidden = true; say("OBS source URL copied"); }
     catch { box.value = url; box.hidden = false; box.focus(); box.select(); say("Copy it from the box below"); }
   };
 

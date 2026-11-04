@@ -1,0 +1,31 @@
+// Audio player for the OBS Browser Source. Wrapped so it can share a page with chat-overlay.js (/stream): both define finish() and connect().
+(() => {
+let ws, audio = null, clipId = 0;
+
+function finish() {
+  if (audio) {
+    audio.pause();
+    URL.revokeObjectURL(audio.src);
+    audio = null;
+  }
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send("done:" + clipId);
+}
+
+function connect() {
+  ws = new WebSocket("ws://" + location.host + "/ws");
+  ws.binaryType = "arraybuffer";
+  ws.onmessage = (e) => {
+    if (typeof e.data === "string") {
+      if (e.data === "stop") finish();
+      return;
+    }
+    if (audio) { audio.pause(); URL.revokeObjectURL(audio.src); }
+    clipId = new DataView(e.data).getUint32(0);
+    audio = new Audio(URL.createObjectURL(new Blob([e.data.slice(4)], { type: "audio/wav" })));
+    audio.onended = audio.onerror = finish;
+    audio.play().catch(finish);
+  };
+  ws.onclose = () => setTimeout(connect, 2000);
+}
+connect();
+})();

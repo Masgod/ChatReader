@@ -11,7 +11,7 @@ The tray menu has:
 - **Pause / Resume**: pauses the worker. Messages keep queuing up to the cap.
 - **Skip current**: stops the clip now playing and moves on.
 - **Settings...**: opens the settings page.
-- **Copy overlay URL**: copies the overlay URL to the clipboard.
+- **Copy overlay URL**: copies the OBS Browser Source URL (`/stream`) to the clipboard.
 - **Quit**: stops the sources, the player and the server.
 
 The tray tooltip shows the status of each source and of the overlay.

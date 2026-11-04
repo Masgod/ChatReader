@@ -24,7 +24,7 @@ Chat is filtered, turned into speech on your PC, and played by an OBS Browser So
 
 1. Download `ChatReader-<version>-win64.zip` from [Releases](https://github.com/Masgod/ChatReader/releases), unzip it and run `ChatReader.exe`. The voice model (about 120 MB) downloads on first run.
 2. In the settings page that opens, type your Twitch channel (or YouTube video link) and press **Save**.
-3. In OBS add a **Browser** source with URL `http://127.0.0.1:8765/overlay` and tick **Control audio via OBS**.
+3. In OBS add a **Browser** source with URL `http://127.0.0.1:8765/stream` (1920 × 1080) and tick **Control audio via OBS**.
 
 The build is not signed, so Windows may warn; the [guide](docs/GUIDE.md#1-install) explains how to verify the zip. Prefer Python? Run from source with `uv sync` then `uv run python -m chatreader`.
 

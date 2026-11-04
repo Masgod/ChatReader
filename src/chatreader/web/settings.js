@@ -183,7 +183,7 @@
   const loadThemes = () => api("/api/themes").then((t) => { themes = t; fillThemes(); refresh(); }).catch(() => {});
 
   for (const b of $$("[data-choice]")) b.onclick = () => { state[b.dataset.choice] = b.dataset.value; refresh(); };
-  $("#chat-overlay-url").value = location.origin + "/chat-overlay";
+  $("#chat-overlay-url").value = location.origin + "/stream";
   $("#copy-chat-url").onclick = async () => {
     const box = $("#chat-overlay-url");
     try { await navigator.clipboard.writeText(box.value); flash("Chat overlay URL copied"); }

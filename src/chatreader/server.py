@@ -160,6 +160,7 @@ _STATIC = {
     "settings.js": "text/javascript",
     "touchnav.js": "text/javascript",
     "icon.svg": "image/svg+xml",
+    "audio.js": "text/javascript",
     "chat-overlay.js": "text/javascript",
     "chat-overlay.css": "text/css",
 }
@@ -283,6 +284,10 @@ def create_app(
     @app.get("/overlay")
     def overlay():
         return _page("overlay.html")
+
+    @app.get("/stream")
+    def stream():
+        return _page("stream.html")  # the one OBS source: audio player plus chat bubbles
 
     @app.get("/chat-overlay")
     def chat_overlay():

@@ -48,7 +48,7 @@ The unchecked items need live chat, OBS and a running game.
 
 Planned, in no fixed order. Open an issue to discuss or vote on any of these.
 
-- **Emote images in the chat overlay bubbles**, and a step-by-step "make a theme" guide (plus one for a game-hero theme). The text overlay itself is done; see the guide section 3a.
+- **Emote images in the chat overlay bubbles**, and a step-by-step "make a theme" guide (plus one for a game-hero theme). The text overlay itself is done; see the guide section 3.
 - **Priority for events** in the speech queue, so cheers and subs are not dropped when the queue is full.
 - **Channel point rewards** (custom Twitch rewards). Needs a Twitch login (OAuth), so it needs its own design.
 - **Installer and code signing**, to avoid the SmartScreen warning and allow updates.

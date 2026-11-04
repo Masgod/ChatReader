@@ -142,7 +142,7 @@ def main(home: str | None = None) -> None:
     base = f"http://127.0.0.1:{cfg.port}"
     stop_server = lambda: None  # noqa: E731
     control = make_control(controller, lambda: icon)
-    icon = tray.build_icon(controller, f"{base}/settings", f"{base}/overlay", lambda: control("quit"), lambda: control("restart"))
+    icon = tray.build_icon(controller, f"{base}/settings", f"{base}/stream", lambda: control("quit"), lambda: control("restart"))
     icon_ref.append(icon)
 
     def boot(icon) -> None:

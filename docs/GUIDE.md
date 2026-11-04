@@ -57,15 +57,17 @@ If the download fails you get a tray notification. Check your internet and start
 
 ## 3. Add it to OBS
 
-ChatReader does not play sound itself. It sends it to OBS through a Browser Source, so you get a separate volume slider and mute button.
+ChatReader does not play sound itself. It sends it to OBS through one Browser Source, so you get a separate volume slider and mute button. The same source also shows the chat bubbles.
 
 1. In OBS, under **Sources**, click **+** and choose **Browser**.
 2. Name it, for example `Chat voice`.
-3. Set **URL** to `http://127.0.0.1:8765/overlay`.
+3. Set **URL** to `http://127.0.0.1:8765/stream`, and the width and height to `1920` × `1080` (the bubbles sit inside this frame, see below; the background is transparent).
 4. Tick **Control audio via OBS**.
 5. Click **OK**.
 
-The source now appears in the OBS **Audio Mixer**.
+The source now appears in the OBS **Audio Mixer**. In the app, the Live tab, **Settings → OBS** and the tray menu **Copy overlay URL** all copy this `/stream` address.
+
+**Upgrading from 0.4 or older:** delete your old `/overlay` and `/chat-overlay` sources in OBS and add this one. They still work, but if an old audio source and `/stream` are both open, the newest connection takes the audio and the other one is silent.
 
 **Hear it yourself:** OBS sends source audio to the stream and recording, not to your own speakers, unless you monitor it. In OBS open **Edit → Advanced Audio Properties** (or the gear next to the source in the Audio Mixer), find `Chat voice`, and set **Audio Monitoring** to **Monitor and Output**. Without this you will hear nothing locally even though the audio works.
 
@@ -75,18 +77,17 @@ The source now appears in the OBS **Audio Mixer**.
 
 Good to know:
 
-- Add the overlay in **one place only**. Don't also open `/overlay` in a normal browser tab, because it takes over the audio.
+- Add the source in **one place only**. Don't also open `/stream` in a normal browser tab, because it takes over the audio.
 - While OBS isn't connected, messages wait in the queue instead of being lost (up to your queue size).
 - If the source is hidden in a scene OBS may unload it. Keep it visible, or right-click the source and untick "Shutdown source when not visible".
 
-## 3a. Show the chat on screen (optional)
+### The chat bubbles
 
-The chat overlay shows a speech bubble for each message, at the moment its voice starts, and removes it a few seconds after the voice ends. Messages that are filtered out or skipped never get a bubble. The audio source from section 3 must be connected, because the bubble follows the voice: with no audio source, messages wait in the queue and no bubble shows.
+The same source shows a speech bubble for each message, at the moment its voice starts, and removes it a few seconds after the voice ends. Messages that are filtered out or skipped never get a bubble. The bubble follows the voice: with OBS not connected, messages wait in the queue and no bubble shows.
 
-1. In OBS add **another** Browser source (the audio one above is still required) with URL `http://127.0.0.1:8765/chat-overlay`.
-2. Set the size to about 450 × 600. The background is transparent.
-3. Open **Settings → Chat overlay** to pick the theme and the position (six places), how many bubbles stay on screen (1 to 10) and how many seconds a bubble stays after the voice ends (0 to 30), and the **Size** of the whole overlay in percent (50 to 200, in steps of 10).
-4. Press **Test bubble** to see a sample. It uses the saved settings, so save first.
+1. The bubbles are drawn inside the source's frame, in the corner you choose, so a 1920 × 1080 source covers the whole scene. You can also make the source smaller (for example 450 × 600) and move it where you like.
+2. Open **Settings → Chat overlay** to pick the theme and the position (six places), how many bubbles stay on screen (1 to 10) and how many seconds a bubble stays after the voice ends (0 to 30), and the **Size** of the whole overlay in percent (50 to 200, in steps of 10).
+3. Press **Test bubble** to see a sample. It uses the saved settings, so save first.
 
 Events (bits, subs, gifts, raids, Super Chat, members) get their own colors and a one-line description when you have **Read events aloud** on.
 
