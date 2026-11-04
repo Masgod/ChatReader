@@ -4,7 +4,7 @@ ChatReader itself is MIT ([LICENSE](../LICENSE)). The components it uses have th
 
 ## Voices and the voice model
 
-The engine is Kokoro-82M. Its code (`kokoro-onnx`, MIT) and weights (Apache-2.0) are permissively licensed, and the model card says it was trained on permissive or non-copyrighted audio. The phonemizer that Kokoro needs (`phonemizer`, espeak-ng) is GPL-3.0: installing from source is fine, but redistributing a built zip that contains it carries GPL obligations (see `THIRD_PARTY_NOTICES.txt`).
+The engine is Kokoro-82M. Its code (`kokoro-onnx`, MIT) and weights (Apache-2.0) are permissively licensed, and the model card says it was trained on permissive or non-copyrighted audio. The phonemizer that Kokoro needs (`phonemizer`, espeak-ng) is GPL-3.0: installing from source is fine, but redistributing a built zip that contains it carries GPL obligations (see `THIRD_PARTY_NOTICES.txt`). Each release therefore also publishes `ChatReader-<version>-gpl-sources.zip` (the exact phonemizer, espeakng-loader and espeak-ng 1.52.0 source, built by `packaging/build.py`), and the notices carry a three-year written offer by issue on Masgod/ChatReader. The espeakng-loader MIT licence is not in its wheel; the build adds it as `licenses/espeakng-loader/LICENSE`.
 
 - Not verified: where the training data of the individual Portuguese voices (`pf_dora`, `pm_alex`, `pm_santa`) comes from. The VOICES.md file does not document it. Ask the author (hexgrad) or get written legal advice before relying on it for a monetized stream.
 - Phonemes come from espeak-ng (GPL-3.0+) through `kokoro-onnx`. This matters if you redistribute the app, not for the generated audio. This is not legal advice.

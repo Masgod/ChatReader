@@ -1,12 +1,13 @@
 # Status
 
-Version 0.2.0, an early release. What has been tested, what has not, and the known limits.
+Version 0.3.0, an early release. What has been tested, what has not, and the known limits.
 
 ## Verified
 
 Automated:
 
-- `uv run pytest -q -m "not slow"`: 541 passed, 1 skipped.
+- `uv run pytest -q -m "not slow"`: 648 passed, 1 skipped (a symlink test that needs Windows Developer Mode).
+- The Twitch device-code login and chat-message calls were compared with the current Twitch documentation. One difference was fixed: Twitch can answer 200 with `is_sent: false` (for example AutoMod held the message), and that now counts as not sent.
 
 Headless smoke launch with an empty config folder:
 
@@ -25,6 +26,10 @@ The unchecked items need live chat, OBS and a running game.
 - [ ] Pause, Skip and Quit work from the tray.
 - [ ] The chat overlay in OBS: a bubble appears when the voice starts for Twitch and for YouTube chat, and none for filtered messages.
 - [ ] CPU use while a game runs: ______ %
+- [x] Twitch chat replies (tested by the author): Connect Twitch (device code), then `!hero`, `!random`, `!hero <name>` in the streamer's own chat; revoke the app and check chat reading keeps working.
+- [x] The Restart button and tray item relaunch the app once, on the same port (tested by the author).
+- [x] The Touch layout (4 big buttons, submenus, one page at a time) in a real OBS dock (tested by the author); not yet on a phone.
+- [ ] The built zip starts on a machine without Python and serves every page.
 
 ## Known limits and risks
 
@@ -33,6 +38,10 @@ The unchecked items need live chat, OBS and a running game.
 - CPU use while a game runs has not been measured.
 - Runs of 10 or more identical characters (for example "kkkkkkkkkk") are dropped as spam.
 - Only one overlay connection is supported. A second connection takes over the audio.
+- The Twitch login is stored in `twitch_token.json` in the app folder, readable only by the current Windows user (set with `icacls`). Anyone with that user's access can still send chat messages as the streamer; revoke the app at twitch.tv/settings/connections to cut it off.
+- Replies only go to Twitch chat, never YouTube.
+- Small known issues that were reviewed and left for later are listed in `docs/superpowers/plans/2026-10-28-release-0.3.md` under "Deferred minors".
+- The Portuguese Kokoro voices have unverified training-data provenance, see [LICENSES](LICENSES.md).
 
 ## Roadmap
 

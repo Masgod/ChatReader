@@ -49,6 +49,15 @@ later. You may receive their complete corresponding source from the addresses
 above, and the licence text from https://www.gnu.org/licenses/gpl-3.0.txt.
 Anyone who redistributes this zip takes on the obligations of those licences
 (including providing the source or a written offer for it, and the licence text).
+
+Corresponding source (GPL-3.0 section 6): the exact source of the versions in this
+zip (phonemizer, espeakng-loader and espeak-ng 1.52.0) is the asset
+ChatReader-<version>-gpl-sources.zip on the same GitHub Release as this zip
+(https://github.com/Masgod/ChatReader/releases), with a README that says where
+each part came from and how it was built. Written offer: for three years from
+the date of that release, anyone who has this zip may ask for the corresponding
+source of these components by opening an issue at https://github.com/Masgod/ChatReader/issues.
+The espeakng-loader MIT licence is in licenses/espeakng-loader/LICENSE.
 LGPL-3.0 (pystray): the library ships as separate files in the folder and can be
 replaced with another version.
 
