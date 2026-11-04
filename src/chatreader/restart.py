@@ -48,8 +48,12 @@ def wait_for_pid(pid: int, seconds: float) -> None:
         kernel32.CloseHandle(ctypes.c_void_p(handle))
 
 
-def wait_for_previous(env=os.environ, wait=wait_for_pid) -> None:
-    """At startup: if a restart started us, wait for the old copy to finish before taking the lock and the port."""
+def wait_for_previous(env=os.environ, wait=wait_for_pid) -> bool:
+    """At startup: if a restart started us, wait for the old copy to finish before taking the lock and the port.
+
+    Returns True when a restart started us (the caller then retries the lock: the old copy may outlive the wait)."""
     raw = env.pop(ENV_PID, "")
     if raw.isdigit() and int(raw) > 0:
         wait(int(raw), WAIT_SECONDS)
+        return True
+    return False
