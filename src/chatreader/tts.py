@@ -14,6 +14,22 @@ MODEL_FILE = "kokoro-v1.0.int8.onnx"  # int8: ~92 MB, noticeably lighter on CPU 
 VOICES_FILE = "voices-v1.0.bin"
 
 
+def normalize_loudness(samples: np.ndarray, target_rms: float = 0.1, max_gain: float = 2.5, peak: float = 0.97) -> np.ndarray:
+    """Bring one clip to a common RMS level. Silence and one-sample clips are returned as they are;
+    the gain is capped so a very quiet clip is not blown up into noise, and the peak never passes `peak`."""
+    clip = np.asarray(samples, dtype=np.float32)
+    if clip.size < 2:
+        return clip
+    rms = float(np.sqrt(np.mean(np.square(clip, dtype=np.float64))))
+    if not np.isfinite(rms) or rms < 1e-6:
+        return clip
+    out = clip * np.float32(min(target_rms / rms, max_gain))
+    top = float(np.max(np.abs(out)))
+    if top > peak:
+        out = out * np.float32(peak / top)
+    return out
+
+
 def _download(url: str, dest: Path) -> None:
     tmp = dest.with_name(dest.name + ".part")
     with urllib.request.urlopen(url, timeout=60) as r, open(tmp, "wb") as f:
@@ -64,6 +80,7 @@ class KokoroTTS:
         self._voice = {}
         self._threads = cfg.cpu_threads  # read once: changing it needs a restart
         self._speed = cfg.speed
+        self._normalize = cfg.normalize_volume
         self._voices_ok = {code: False for code in cfg.languages}
         self._known: set[str] = set()
         self.model_state = "missing"  # missing | loading | ready | error
@@ -102,6 +119,7 @@ class KokoroTTS:
                 return
             self.model_state = "ready"
         self._speed = cfg.speed
+        self._normalize = cfg.normalize_volume
         known = self._known = set(self._kokoro.get_voices())
         chosen = {}
         self._voices_ok = {code: False for code in cfg.languages}
@@ -123,6 +141,8 @@ class KokoroTTS:
         if requested and VOICE_NAME_RE.fullmatch(requested) and requested in self._known:
             name = requested  # per-viewer voice; anything unknown falls back to the configured one
         samples, rate = kokoro.create(text, voice=name, speed=self._speed, lang=LANGUAGES[lang].kokoro)
+        if self._normalize:
+            samples = normalize_loudness(samples)  # per sentence: the player synthesizes one sentence at a time
         buf = io.BytesIO()
         with wave.open(buf, "wb") as w:
             w.setnchannels(1)

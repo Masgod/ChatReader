@@ -61,6 +61,7 @@ class Config:
     random_cooldown_max: int = 300
     random_global_base: int = 2  # same idea for the whole chat
     random_global_max: int = 60
+    normalize_volume: bool = True  # bring every sentence to a similar loudness; Kokoro voices differ in level
 
     def voices(self) -> dict[str, str]:
         """The voice chosen for each enabled language."""

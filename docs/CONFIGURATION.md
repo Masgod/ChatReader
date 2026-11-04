@@ -44,6 +44,7 @@ The file uses the defaults below when a key is missing. Keys that are not known 
 | `twitch_roles` / `youtube_roles` | `[]` | Who is read on that platform: empty means everyone, otherwise any of `sub`, `vip`, `mod` (the owner is always read). |
 | `repeat_seconds` | `30` | Skip the same text from anyone within this many seconds; `0` turns it off. |
 | `per_user_voices` | `true` | Give each viewer a stable voice picked from the model's voices. |
+| `normalize_volume` | `true` | Bring each spoken sentence to a similar loudness (RMS 0.1, gain at most 2.5×, never clipping), because Kokoro voices come out at different levels. Turn it off to get the raw voice level. Applies without a restart. |
 | `speak_emotes` | `true` | Read laughs (`LUL`, `KEKW`, `kkkk`, `rsrs`) as a laugh and leave out other emotes (`Kappa`, `:name:`). A message that is only emotes is skipped. |
 | `youtube_channel` | `""` | `@handle` or `UC...` channel ID. When set and `youtube_video_id` is empty, the app waits for the channel's live stream and connects by itself. |
 | `overlay_theme` | `"default"` | Chat overlay theme: a folder name under `themes/` in the app folder, or the built-in `default`. |
