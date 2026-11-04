@@ -27,8 +27,8 @@ The unchecked items need live chat, OBS and a running game.
 - [ ] The chat overlay in OBS: a bubble appears when the voice starts for Twitch and for YouTube chat, and none for filtered messages.
 - [ ] CPU use while a game runs: ______ %
 - [x] Twitch chat replies (tested by the author): Connect Twitch (device code), then `!hero`, `!random`, `!hero <name>` in the streamer's own chat; revoke the app and check chat reading keeps working.
-- [ ] The Restart button and tray item relaunch the app once, on the same port.
-- [ ] The Touch layout (4 big buttons, submenus, one page at a time) in a real OBS dock and on a phone.
+- [x] The Restart button and tray item relaunch the app once, on the same port (tested by the author).
+- [x] The Touch layout (4 big buttons, submenus, one page at a time) in a real OBS dock (tested by the author); not yet on a phone.
 - [ ] The built zip starts on a machine without Python and serves every page.
 
 ## Known limits and risks
