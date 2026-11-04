@@ -52,3 +52,48 @@ def test_runtime_closure_includes_transitive_dependencies():
 def test_copy_licenses_writes_files(tmp_path):
     n = _build().copy_licenses({"fastapi", "pytchat", "not-installed-xyz"}, tmp_path)
     assert n >= 1 and any(tmp_path.rglob("*"))
+
+
+def _fake_fetch(url):
+    return b"data:" + url.encode()
+
+
+def test_gpl_sources_plan_pins_the_locked_versions():
+    plan = {e["name"]: e for e in _build().gpl_sources(ROOT / "uv.lock")}
+    assert set(plan) == {"phonemizer", "espeakng-loader", "espeak-ng"}
+    lock = tomllib.loads((ROOT / "uv.lock").read_text("utf-8"))["package"]
+    for name in ("phonemizer", "espeakng-loader"):
+        assert plan[name]["version"] == next(p["version"] for p in lock if p["name"] == name)
+    assert plan["phonemizer"]["sha256"]  # the sdist hash from uv.lock is checked after the download
+    assert plan["espeak-ng"]["version"] == "1.52.0" and re.fullmatch(r"[0-9a-f]{40}", plan["espeak-ng"]["commit"])
+    assert re.fullmatch(r"[0-9a-f]{40}", plan["espeakng-loader"]["commit"])
+
+
+def test_gpl_sources_zip_holds_all_components_and_a_readme(tmp_path):
+    b = _build()
+    plan = b.gpl_sources(ROOT / "uv.lock")
+    z = tmp_path / "s.zip"
+    b.build_gpl_sources_zip(z, "0.3.0", plan, fetch=_fake_fetch, verify=False)
+    import zipfile
+    names = zipfile.ZipFile(z).namelist()
+    assert "README.txt" in names and len([n for n in names if n.startswith("sources/")]) == 3
+    readme = zipfile.ZipFile(z).read("README.txt").decode()
+    for e in plan:
+        assert e["name"] in readme and e["url"] in readme
+
+
+def test_download_rejects_a_wrong_hash():
+    import pytest
+    with pytest.raises(ValueError):
+        _build().fetch_checked("http://x", "0" * 64, fetch=_fake_fetch)
+
+
+def test_espeakng_loader_licence_is_declared_for_the_main_zip():
+    b = _build()
+    assert b.LOADER_LICENSE_URL.startswith("https://raw.githubusercontent.com/thewh1teagle/espeakng-loader/")
+    assert b.LOADER_LICENSE_SHA256 and (ROOT / "THIRD_PARTY_NOTICES.txt").read_text("utf-8").count("gpl-sources.zip") >= 1
+
+
+def test_notices_offer_the_source_in_writing():
+    notices = (ROOT / "THIRD_PARTY_NOTICES.txt").read_text("utf-8")
+    assert "gpl-sources.zip" in notices and "three years" in notices and "Masgod/ChatReader" in notices
