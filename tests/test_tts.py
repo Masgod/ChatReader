@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from chatreader.config import Config
-from chatreader.tts import MODEL_FILE, VOICES_FILE, KokoroTTS, ensure_models
+from chatreader.tts import MODEL_FILE, VOICES_FILE, KokoroTTS, ensure_models, normalize_loudness
 
 
 class FakeKokoro:
@@ -205,3 +205,80 @@ def test_voices_grouped_by_language_prefix(tmp_path):
     tts = KokoroTTS(tmp_path, Config(), lambda m: None, loader=lambda m, v, t: fake)
     got = {code: [v["id"] for v in voices] for code, voices in tts.voices().items()}
     assert got == {"pt": ["pf_dora"], "en": ["bm_george"], "es": ["ef_dora"], "fr": ["ff_siwis"], "it": ["if_sara"]}
+
+
+def _sine(amp, n=24000):
+    return (amp * np.sin(np.linspace(0, 200 * np.pi, n))).astype(np.float32)
+
+
+def _rms(x):
+    return float(np.sqrt(np.mean(np.square(x, dtype=np.float64))))
+
+
+def test_quiet_clip_rises_toward_target_by_at_most_max_gain():
+    out = normalize_loudness(_sine(0.1))  # rms 0.07
+    assert 0.07 < _rms(out) <= 0.1 + 1e-4
+    quiet = _sine(0.02)  # rms 0.014: target would need x7, the cap allows x2.5
+    assert _rms(normalize_loudness(quiet)) == pytest.approx(_rms(quiet) * 2.5, rel=1e-3)
+
+
+def test_loud_clip_is_lowered_to_target():
+    assert _rms(normalize_loudness(_sine(0.42))) == pytest.approx(0.1, rel=1e-3)
+
+
+def test_silence_and_one_sample_clips_come_back_unchanged():
+    for clip in (np.zeros(2400, dtype=np.float32), np.zeros(0, dtype=np.float32), np.array([0.5], dtype=np.float32), np.array([1e-9] * 5, dtype=np.float32)):
+        out = normalize_loudness(clip)
+        assert np.array_equal(out, clip) and out.dtype == np.float32
+
+
+def test_non_finite_samples_are_left_alone_without_error():
+    clip = np.array([0.1, np.nan, 0.2], dtype=np.float32)
+    assert np.array_equal(normalize_loudness(clip), clip, equal_nan=True)
+
+
+def test_peak_never_exceeds_the_limit():
+    clip = np.zeros(24000, dtype=np.float32)
+    clip[100] = 1.0  # one loud click on near silence
+    clip += _sine(0.05)
+    out = normalize_loudness(clip)
+    assert float(np.max(np.abs(out))) <= 0.97 + 1e-6 and out.dtype == np.float32
+
+
+def test_two_sentences_of_one_message_do_not_jump_in_level():
+    a, b = normalize_loudness(_sine(0.06)), normalize_loudness(_sine(0.3))
+    assert _rms(a) == pytest.approx(_rms(b), rel=0.05)
+
+
+def test_does_not_modify_its_input():
+    clip = _sine(0.3)
+    before = clip.copy()
+    normalize_loudness(clip)
+    assert np.array_equal(clip, before)
+
+
+class LoudFake(FakeKokoro):
+    def create(self, text, voice, speed, lang):
+        super().create(text, voice, speed, lang)
+        return _sine(0.42), 24000
+
+
+def _wav_rms(data):
+    with wave.open(io.BytesIO(data)) as w:
+        x = np.frombuffer(w.readframes(w.getnframes()), dtype="<i2").astype(np.float64) / 32767
+    return _rms(x)
+
+
+def test_synth_normalizes_only_when_the_setting_is_on(tmp_path):
+    _files(tmp_path)
+    on = KokoroTTS(tmp_path, Config(), lambda m: None, loader=lambda m, v, t: LoudFake())
+    off = KokoroTTS(tmp_path, Config(normalize_volume=False), lambda m: None, loader=lambda m, v, t: LoudFake())
+    assert _wav_rms(on.synth("hi", "en")) == pytest.approx(0.1, rel=0.01)
+    assert _wav_rms(off.synth("hi", "en")) == pytest.approx(_rms(_sine(0.42)), rel=0.01)
+
+
+def test_reload_applies_the_setting_live(tmp_path):
+    _files(tmp_path)
+    tts = KokoroTTS(tmp_path, Config(normalize_volume=False), lambda m: None, loader=lambda m, v, t: LoudFake())
+    tts.reload(Config(normalize_volume=True))
+    assert _wav_rms(tts.synth("hi", "en")) == pytest.approx(0.1, rel=0.01)
