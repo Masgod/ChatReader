@@ -80,8 +80,8 @@ Why on by default: different Kokoro voices come out at different levels, and a s
 **Files:**
 - Test: `tests/test_tts_long.py` (marked `slow`, skipped when the model is not downloaded)
 
-- [ ] **Step 1: Write the test.** `kokoro-onnx` already splits phonemes into batches of at most 510 (`MAX_PHONEME_LENGTH`); confirm it with a 900-character text without punctuation and `max_chars` raised in the config. Expected: a WAV longer than 20 s, no exception.
-- [ ] **Step 2: Run it** (`uv run pytest -q -m slow tests/test_tts_long.py`). If it raises, add the split in `player.split_sentences` by length and ledger the finding; if it passes, commit the test only.
+- [x] **Step 1: Write the test.** `kokoro-onnx` already splits phonemes into batches of at most 510 (`MAX_PHONEME_LENGTH`); confirm it with a 900-character text without punctuation and `max_chars` raised in the config. Expected: a WAV longer than 20 s, no exception. (e1fd76e)
+- [x] **Step 2: Run it** (`uv run pytest -q -m slow tests/test_tts_long.py`). (e1fd76e: 903 chars → 57.6 s WAV, no exception, 1 passed) If it raises, add the split in `player.split_sentences` by length and ledger the finding; if it passes, commit the test only.
 
 ### Task 5: Docs and release note
 
