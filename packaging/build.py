@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import tomllib
+import urllib.parse
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -68,8 +69,19 @@ def write_checksum(zip_path: Path) -> Path:
     return out
 
 
+ALLOWED_HOSTS = {"files.pythonhosted.org", "github.com", "codeload.github.com", "raw.githubusercontent.com"}
+
+
+def _check_url(url: str) -> None:
+    u = urllib.parse.urlparse(url)
+    if u.scheme != "https" or u.hostname not in ALLOWED_HOSTS:
+        raise ValueError(f"refusing to download {url}")
+
+
 def download(url: str) -> bytes:
+    _check_url(url)
     with urllib.request.urlopen(url, timeout=120) as r:
+        _check_url(r.geturl())  # after redirects (github.com archive -> codeload.github.com)
         return r.read()
 
 

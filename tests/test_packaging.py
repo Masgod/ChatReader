@@ -97,3 +97,10 @@ def test_espeakng_loader_licence_is_declared_for_the_main_zip():
 def test_notices_offer_the_source_in_writing():
     notices = (ROOT / "THIRD_PARTY_NOTICES.txt").read_text("utf-8")
     assert "gpl-sources.zip" in notices and "three years" in notices and "Masgod/ChatReader" in notices
+
+
+def test_download_refuses_other_schemes_and_hosts():
+    import pytest
+    for bad in ("file:///C:/Windows/win.ini", "http://github.com/x", "https://evil.example/x"):
+        with pytest.raises(ValueError):
+            _build().download(bad)
