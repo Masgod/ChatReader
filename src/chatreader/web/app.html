@@ -9,6 +9,8 @@
   // Style is chosen per device (Settings > System); set before first paint so the page never flashes the other one.
   try { var ui = localStorage.getItem("ui"); } catch (e) {}
   document.documentElement.dataset.ui = ui === "mouse" ? "mouse" : "touch";
+  try { var level = localStorage.getItem("level"); } catch (e) {}
+  document.documentElement.dataset.level = level === "advanced" ? "advanced" : "basic";  // new devices start with the few settings they need
   document.documentElement.dataset.view = "home";  // touch style starts on the 4 big buttons
 </script>
 
@@ -22,9 +24,10 @@
 
 <nav id="home" aria-label="Menu">
   <button type="button" class="tile" data-group="live"><span class="ico" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><span><b>Live</b><small>Queue, controls, console</small></span></button>
-  <button type="button" class="tile" data-group="sources"><span class="ico" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1a10 10 0 0 1 0-14.2M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4M19.1 4.9a10 10 0 0 1 0 14.2M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg></span><span><b>Sources</b><small>Twitch, YouTube, replies</small></span></button>
+  <button type="button" class="tile" data-group="sources"><span class="ico" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1a10 10 0 0 1 0-14.2M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4M19.1 4.9a10 10 0 0 1 0 14.2M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg></span><span><b>Sources</b><small>Twitch, YouTube, OBS</small></span></button>
   <button type="button" class="tile" data-group="voice"><span class="ico" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg></span><span><b>Voice</b><small>Voices, reading, events</small></span></button>
-  <button type="button" class="tile" data-group="system"><span class="ico" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span><span><b>Overlay &amp; system</b><small>Chat overlay, style, app</small></span></button>
+  <button type="button" class="tile" data-group="system" data-level="advanced"><span class="ico" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span><span><b>Overlay &amp; system</b><small>Chat overlay, style, app</small></span></button>
+  <button type="button" class="more" id="more-home" data-level-switch="advanced">More settings</button>
 </nav>
 <nav id="subs" aria-label="Submenu"></nav>
 
@@ -94,7 +97,7 @@
       </ul>
     </div>
 
-    <details class="sect" id="sect-sources" open>
+    <details class="sect" id="sect-sources" data-level="basic" open>
       <summary><h2>Sources</h2></summary>
       <div class="card">
         <label class="row grid">
@@ -138,7 +141,7 @@
       </div>
     </details>
 
-    <details class="sect" id="sect-voices" open>
+    <details class="sect" id="sect-voices" data-level="basic" open>
       <summary><h2>Voices</h2></summary>
       <div class="card">
         <div class="row grid">
@@ -157,7 +160,27 @@
       </div>
     </details>
 
-    <details class="sect" id="sect-events" open>
+    <details class="sect" id="sect-obs" data-level="basic" open>
+      <summary><h2>OBS</h2></summary>
+      <div class="card">
+        <div class="row grid">
+          <div><div class="name">Browser Source URL</div><div class="hint">One source for the voice and the chat bubbles</div></div>
+          <div class="pick">
+            <div class="field grow"><input type="text" id="obs-url" class="mono-field" readonly aria-label="OBS Browser Source URL"></div>
+            <button type="button" class="btn" id="copy-obs-url">Copy</button>
+          </div>
+        </div>
+        <div class="row">
+          <ol class="steps">
+            <li>In OBS, under Sources, click + and choose Browser.</li>
+            <li>Paste the URL above. Set the width to 1920 and the height to 1080.</li>
+            <li>Tick "Control audio via OBS", click OK, then press Test voice below.</li>
+          </ol>
+        </div>
+      </div>
+    </details>
+
+    <details class="sect" id="sect-events" data-level="advanced" open>
       <summary><h2>Events</h2></summary>
       <div class="card">
         <div class="row">
@@ -186,7 +209,7 @@
       </div>
     </details>
 
-    <details class="sect" id="sect-reading" open>
+    <details class="sect" id="sect-reading" data-level="advanced" open>
       <summary><h2>Reading</h2></summary>
       <div class="card">
         <div class="row">
@@ -240,7 +263,7 @@
       </div>
     </details>
 
-    <details class="sect" id="sect-overlay" open>
+    <details class="sect" id="sect-overlay" data-level="advanced" open>
       <summary><h2>Chat overlay</h2></summary>
       <div class="card">
         <div class="row grid">
@@ -282,13 +305,6 @@
             <button type="button" data-d="1" aria-label="Make the overlay bigger">+</button>
           </div>
         </div>
-        <div class="row grid">
-          <div><div class="name">OBS Browser Source URL</div><div class="hint">One source for the voice and the bubbles · 1920 × 1080 · tick "Control audio via OBS" · bubbles only appear while the voice plays</div></div>
-          <div class="pick">
-            <div class="field grow"><input type="text" id="chat-overlay-url" class="mono-field" readonly aria-label="OBS Browser Source URL"></div>
-            <button type="button" class="btn" id="copy-chat-url">Copy</button>
-          </div>
-        </div>
         <div class="row">
           <div class="txt"><div class="name">Try it</div><div class="hint">Shows a sample bubble with the saved settings</div></div>
           <button type="button" class="btn" id="test-bubble">Test bubble</button>
@@ -296,7 +312,7 @@
       </div>
     </details>
 
-    <details class="sect" id="sect-ignored" open>
+    <details class="sect" id="sect-ignored" data-level="advanced" open>
       <summary><h2>Ignored users <small id="ignored-count"></small></h2></summary>
       <div class="card pad">
         <div class="chips" id="chips"></div>
@@ -307,7 +323,7 @@
       </div>
     </details>
 
-    <details class="sect" id="sect-pronunciations" open>
+    <details class="sect" id="sect-pronunciations" data-level="advanced" open>
       <summary><h2>Pronunciations <small id="pron-count"></small></h2></summary>
       <div class="card pad">
         <div class="hint">Say a word your own way. Whole words only, upper or lower case, e.g. kekw → kek double you. Save, then use Test voice to hear it.</div>
@@ -320,7 +336,7 @@
       </div>
     </details>
 
-    <details class="sect" id="sect-system" open>
+    <details class="sect" id="sect-system" data-level="advanced" open>
       <summary><h2>System</h2></summary>
       <div class="card">
         <div class="row grid">
@@ -328,6 +344,13 @@
           <div class="roles" role="group" aria-labelledby="l-ui">
             <button type="button" class="pill" data-ui="touch">Touch</button>
             <button type="button" class="pill" data-ui="mouse">Mouse</button>
+          </div>
+        </div>
+        <div class="row grid">
+          <div><div class="name" id="l-level">Settings shown</div><div class="hint">Basic has what you need to start · this device only</div></div>
+          <div class="roles" role="group" aria-labelledby="l-level">
+            <button type="button" class="pill" data-level-switch="basic">Basic</button>
+            <button type="button" class="pill" data-level-switch="advanced">Advanced</button>
           </div>
         </div>
         <label class="row">
@@ -352,6 +375,8 @@
         </div>
       </div>
     </details>
+
+    <button type="button" class="btn" id="more-settings" data-level-switch="advanced">More settings</button>
 
     <div class="savebar">
       <div id="msg" role="status"></div>

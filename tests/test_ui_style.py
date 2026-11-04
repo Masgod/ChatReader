@@ -53,3 +53,53 @@ def test_pronunciations_section_exists_and_is_in_the_touch_menu():
         sjs = c.get("/static/settings.js").text
     assert 'id="sect-pronunciations"' in html and "sect-pronunciations" in js
     assert "pronunciations" in sjs
+
+
+BASIC = {"sect-sources", "sect-voices", "sect-obs"}
+ADVANCED = {"sect-events", "sect-reading", "sect-ignored", "sect-pronunciations", "sect-overlay", "sect-system"}
+
+
+def _sections(html):
+    import re
+    return {m.group(1): m.group(0) for m in re.finditer(r'<details class="sect" id="(sect-[a-z]+)"[^>]*>', html)}
+
+
+def test_every_section_is_basic_or_advanced_and_the_split_is_the_decided_one():
+    with _client() as c:
+        html = c.get("/settings").text
+    tags = _sections(html)
+    assert set(tags) == BASIC | ADVANCED
+    for sid, tag in tags.items():
+        assert tag.count("data-level=") == 1, sid
+        assert (f'data-level="{"basic" if sid in BASIC else "advanced"}"') in tag, sid
+
+
+def test_level_is_chosen_per_device_before_first_paint_and_defaults_to_basic():
+    with _client() as c:
+        html = c.get("/settings").text
+        css = c.get("/static/app.css").text
+        js = c.get("/static/app.js").text
+    assert html.index('dataset.level = level === "advanced" ? "advanced" : "basic"') < html.index("<header")
+    assert 'data-level-switch="basic"' in html and 'data-level-switch="advanced"' in html
+    assert "html[data-level=basic] .sect[data-level=advanced]" in css and "display: none" in css.split("html[data-level=basic] .sect[data-level=advanced]")[1][:60]
+    assert 'localStorage.setItem("level"' in js
+
+
+def test_obs_card_holds_the_stream_url_and_steps_and_the_old_url_row_is_gone():
+    with _client() as c:
+        html = c.get("/settings").text
+    obs = html[html.index('id="sect-obs"'):]
+    obs = obs[:obs.index("</details>")]
+    assert 'id="obs-url"' in obs and "Control audio via OBS" in obs and "1920" in obs
+    assert 'id="chat-overlay-url"' not in html
+
+
+def test_touch_menu_filters_pages_by_level_and_offers_more_settings():
+    with _client() as c:
+        js = c.get("/static/touchnav.js").text
+        html = c.get("/settings").text
+        css = c.get("/static/app.css").text
+    assert "sect-obs" in js and "More settings" in html and 'id="more-home"' in html and 'id="more-settings"' in html
+    assert 'level: "advanced"' in js and "dataset.level" in js
+    assert html.count('class="tile"') == 4  # the extra button is not a tile
+    assert "html[data-ui=touch] #more-settings" in css and "html[data-level=advanced] #more-home" in css

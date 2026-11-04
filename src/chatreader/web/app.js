@@ -116,6 +116,16 @@
   });
   markUi();
 
+  // Basic/Advanced is per device like the style; hidden sections keep their values because Save sends the whole config.
+  const levelButtons = document.querySelectorAll("button[data-level-switch]");
+  const markLevel = () => levelButtons.forEach((b) => b.setAttribute("aria-pressed", b.dataset.levelSwitch === document.documentElement.dataset.level));
+  levelButtons.forEach((b) => b.addEventListener("click", () => {
+    document.documentElement.dataset.level = b.dataset.levelSwitch;
+    try { localStorage.setItem("level", b.dataset.levelSwitch); } catch { /* private window: the choice lasts until the page closes */ }
+    markLevel();
+  }));
+  markLevel();
+
   showTab(initialTab(), true);
   App.poll(async () => {
     const s = await App.api("/api/status");

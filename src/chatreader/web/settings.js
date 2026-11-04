@@ -183,10 +183,10 @@
   const loadThemes = () => api("/api/themes").then((t) => { themes = t; fillThemes(); refresh(); }).catch(() => {});
 
   for (const b of $$("[data-choice]")) b.onclick = () => { state[b.dataset.choice] = b.dataset.value; refresh(); };
-  $("#chat-overlay-url").value = location.origin + "/stream";
-  $("#copy-chat-url").onclick = async () => {
-    const box = $("#chat-overlay-url");
-    try { await navigator.clipboard.writeText(box.value); flash("Chat overlay URL copied"); }
+  $("#obs-url").value = location.origin + "/stream";
+  $("#copy-obs-url").onclick = async () => {
+    const box = $("#obs-url");
+    try { await navigator.clipboard.writeText(box.value); flash("OBS source URL copied"); }
     catch { box.focus(); box.select(); flash("Copy it from the box"); }
   };
   const loginHint = (...nodes) => $("#twitch-login-hint").replaceChildren(...nodes);

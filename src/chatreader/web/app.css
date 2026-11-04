@@ -176,6 +176,11 @@ html[data-ui=touch] .savebar .btn { min-width: 120px; }
 
 /* touch navigation (touchnav.js): 4 big buttons -> submenu -> one page. The base is the mouse style, so the menu is hidden by default. */
 #home, #subs, #back { display: none; }
+html[data-level=basic] .tile[data-level=advanced], html[data-level=basic] .sect[data-level=advanced] { display: none; }
+html[data-level=advanced] #more-home, html[data-level=advanced] #more-settings, html[data-ui=touch] #more-settings { display: none; }
+#more-home { grid-column: 1 / -1; min-height: 56px; border: 1px solid var(--line2); border-radius: 14px; background: transparent; color: var(--dim, inherit); font-size: 16px; }
+#more-settings { margin: 0 0 12px; }
+.steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
 html[data-ui=touch] .tabs { display: none; }
 html[data-ui=touch] #back { display: flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; border: 0; border-radius: 12px; background: var(--chip); font-size: 28px; line-height: 1; }
 html[data-ui=touch]:not([data-view=home]) .logo { display: none; }

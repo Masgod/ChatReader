@@ -2,18 +2,20 @@
 (() => {
   const { $, $$ } = App;
   const root = document.documentElement;
-  const page = (label, tab, sect) => ({ label, tab, sect });
+  const basic = (label, tab, sect) => ({ label, tab, sect, level: "basic" });
+  const advanced = (label, tab, sect) => ({ label, tab, sect, level: "advanced" });
+  const visible = (g) => g.pages.filter((p) => p.level === "basic" || root.dataset.level === "advanced");  // Basic lists only the basic pages
   const GROUPS = {
-    live: { title: "Live", pages: [page("Queue & controls", "live"), page("Console", "console")] },
-    sources: { title: "Sources", pages: [page("Sources", "settings", "sect-sources")] },
+    live: { title: "Live", pages: [basic("Queue & controls", "live"), basic("Console", "console")] },
+    sources: { title: "Sources", pages: [basic("Sources", "settings", "sect-sources"), basic("OBS", "settings", "sect-obs")] },
     voice: {
       title: "Voice",
       pages: [
-        page("Voices", "settings", "sect-voices"), page("Reading", "settings", "sect-reading"),
-        page("Events", "settings", "sect-events"), page("Ignored users", "settings", "sect-ignored"), page("Pronunciations", "settings", "sect-pronunciations"),
+        basic("Voices", "settings", "sect-voices"), advanced("Reading", "settings", "sect-reading"),
+        advanced("Events", "settings", "sect-events"), advanced("Ignored users", "settings", "sect-ignored"), advanced("Pronunciations", "settings", "sect-pronunciations"),
       ],
     },
-    system: { title: "Overlay & system", pages: [page("Chat overlay", "settings", "sect-overlay"), page("System", "settings", "sect-system")] },
+    system: { title: "Overlay & system", pages: [advanced("Chat overlay", "settings", "sect-overlay"), advanced("System", "settings", "sect-system")] },
   };
   let group = null;
 
@@ -35,8 +37,9 @@
 
   function openGroup(name) {
     group = GROUPS[name];
-    if (group.pages.length === 1) return open(group.pages[0]);
-    $("#subs").replaceChildren(...group.pages.map((p) => {
+    const pages = visible(group);
+    if (pages.length === 1) return open(pages[0]);
+    $("#subs").replaceChildren(...pages.map((p) => {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "sub";
@@ -49,8 +52,9 @@
 
   $$("[data-group]").forEach((b) => { b.onclick = () => openGroup(b.dataset.group); });
   $$("button[data-ui]").forEach((b) => b.addEventListener("click", () => show("home", "ChatReader")));  // a style switch starts over, so the title never says "System" in Mouse style
+  $$("button[data-level-switch]").forEach((b) => b.addEventListener("click", () => show("home", "ChatReader")));  // the menu changes, so start over
   $("#back").onclick = () => {
-    if (root.dataset.view === "page" && group.pages.length > 1) show("sub", group.title);
+    if (root.dataset.view === "page" && visible(group).length > 1) show("sub", group.title);
     else show("home", "ChatReader");
   };
 })();

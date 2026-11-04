@@ -161,6 +161,8 @@ Hover over the icon to see the status of Twitch, YouTube and the OBS connection.
 
 The page has a footer with **Save** and **Test voice**. When you change something it says *Unsaved changes*; **Save** applies it immediately.
 
+**Basic and Advanced:** a new device starts in **Basic**, which shows only **Sources**, **Voices** and **OBS** (the `/stream` address with the three OBS steps). Press **More settings** (at the bottom of the Touch menu, or under the settings in Mouse style) to see everything else: Events, Reading, Ignored users, Pronunciations, Chat overlay and System. The choice is remembered per device, like Touch/Mouse, and can be changed under **System → Settings shown**. Settings hidden in Basic keep their values, and Save always saves all of them.
+
 ### Sources
 - **Twitch channel**, **YouTube video**: see [section 4](#4-connect-your-chats).
 - **Who is read** (one per platform): Everyone, or only Subscribers (Members on YouTube), VIPs (Twitch only) and/or Mods. The channel owner is always read. If the platform doesn't report a role for a viewer, that viewer counts as having none. Messages that don't match show as `skipped:role` in the Console.
@@ -196,6 +198,7 @@ Bots and people you never want read. Type a name and press **Add**, or click **�
 Make the voice say a word your way: type the word (for example `kekw` or a streamer's name) and how it should sound, then press **Add** and **Save**. Whole words only, upper or lower case, accents included (`Zé`), and a rule is never treated as a pattern, so `c++` means exactly `c++`. It applies to chat, to the announced user name and to **Test voice**; the chat overlay still shows what was typed. Up to 200 rules.
 
 ### System
+- **Settings shown**: Basic or Advanced, see the start of this section.
 - **Style**: Touch (the default) opens on 4 big buttons (Live, Sources, Voice, Overlay & system); each opens a short list of pages, one page at a time, with a Back button. Made for a tablet, a phone or a touch screen. Mouse keeps the Live / Console / Settings tabs and the compact layout. Switching style returns to the start. It is remembered per device and browser (an OBS dock keeps its own), not in `config.toml`.
 - **Port**: the local port. Leave it unless something else uses 8765. Changing it needs a restart, and you must update the OBS URL.
 - **Start with Windows**: starts ChatReader when you sign in (adds a shortcut to your Startup folder).
