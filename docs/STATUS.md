@@ -36,6 +36,7 @@ The unchecked items need live chat, OBS and a running game.
 - `pytchat` scrapes YouTube and can break when YouTube changes. `sources/youtube.py` is isolated. The official YouTube API is a possible fallback; it is not implemented.
 - Measured on this PC with 2 CPU threads: about 0.65 s of compute per second of audio, so a 3 s message takes about 2 s to synthesize. It keeps up in steady state but adds latency. The thread count is the `cpu_threads` setting.
 - CPU use while a game runs has not been measured.
+- Idle unload of the voice model: measured, not worth it (2026-11-04, dev run on this PC, 2 CPU threads, Windows working set of the app process). Model loaded and idle: 218.8 MB (220.1 MB after a synth); model not loaded: 98.9 MB. Saving about 120 MB, under the 150 MB bar. Loading takes about 1.9 s on top of the 1.7 s a short sentence takes to synthesize, so the first message after an unload would wait about 3.6 s instead of 1.7 s. Not built.
 - Runs of 10 or more identical characters (for example "kkkkkkkkkk") are dropped as spam.
 - Only one overlay connection is supported. A second connection takes over the audio.
 - The Twitch login is stored in `twitch_token.json` in the app folder, readable only by the current Windows user (set with `icacls`). Anyone with that user's access can still send chat messages as the streamer; revoke the app at twitch.tv/settings/connections to cut it off.
