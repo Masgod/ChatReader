@@ -104,3 +104,8 @@ def test_download_refuses_other_schemes_and_hosts():
     for bad in ("file:///C:/Windows/win.ini", "http://github.com/x", "https://evil.example/x"):
         with pytest.raises(ValueError):
             _build().download(bad)
+
+def test_runtime_version_matches_pyproject():
+    import chatreader
+
+    assert chatreader.__version__ == tomllib.loads((ROOT / "pyproject.toml").read_text("utf-8"))["project"]["version"]

@@ -53,3 +53,11 @@ def test_pronunciations_section_exists_and_is_in_the_touch_menu():
         sjs = c.get("/static/settings.js").text
     assert 'id="sect-pronunciations"' in html and "sect-pronunciations" in js
     assert "pronunciations" in sjs
+
+def test_update_banner_and_check_switch_exist():
+    with _client() as c:
+        html = c.get("/settings").text
+        js = c.get("/static/app.js").text
+    assert 'id="update-banner"' in html and 'id="check_updates"' in html and 'data-toggle="check_updates"' in html
+    assert "s.update" in js and "update-dismissed" in js
+    assert "innerHTML" not in js  # the version and link come from the network: textContent only

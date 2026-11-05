@@ -614,3 +614,17 @@ def test_api_overlay_falls_back_to_default_with_a_warning(tmp_path, theme):
     with _theme_client(tmp_path, theme) as c:
         body = c.get("/api/overlay").json()
         assert body["theme"]["name"] == "Default" and theme in body["warning"]
+
+def test_status_carries_the_update_when_the_app_provides_one():
+    news = {"version": "0.6.0", "url": "https://github.com/Masgod/ChatReader/releases/tag/v0.6.0"}
+    app = create_app(lambda: Config(), lambda c: None, Hub(), lambda t: None, lambda: {"queue": 1}, lambda a: None, update=lambda: news)
+    with TestClient(app, base_url="http://127.0.0.1") as c:
+        assert c.get("/api/status").json() == {"queue": 1, "update": news}
+    app = create_app(lambda: Config(), lambda c: None, Hub(), lambda t: None, lambda: {"queue": 1}, lambda a: None, update=lambda: None)
+    with TestClient(app, base_url="http://127.0.0.1") as c:
+        assert c.get("/api/status").json() == {"queue": 1, "update": None}
+
+
+def test_status_without_an_update_source_is_unchanged(env):
+    client, *_ = env
+    assert "update" not in client.get("/api/status").json()

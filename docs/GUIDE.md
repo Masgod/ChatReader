@@ -196,6 +196,7 @@ Make the voice say a word your way: type the word (for example `kekw` or a strea
 
 ### System
 - **Style**: Touch (the default) opens on 4 big buttons (Live, Sources, Voice, Overlay & system); each opens a short list of pages, one page at a time, with a Back button. Made for a tablet, a phone or a touch screen. Mouse keeps the Live / Console / Settings tabs and the compact layout. Switching style returns to the start. It is remembered per device and browser (an OBS dock keeps its own), not in `config.toml`.
+- **Check for new versions**: on by default. Once a day ChatReader asks GitHub whether a newer release exists (one request, nothing about you is sent) and tells you in the tray and with a banner. Turn it off and it never connects.
 - **Port**: the local port. Leave it unless something else uses 8765. Changing it needs a restart, and you must update the OBS URL.
 - **Start with Windows**: starts ChatReader when you sign in (adds a shortcut to your Startup folder).
 - **Debug**: writes more detail to the log file. Leave it off normally.

@@ -107,6 +107,21 @@
     $("#status-text").textContent = (s.paused ? "paused · " : "") + text + (s.queue ? " · " + s.queue + " waiting" : "");
   }
 
+  // Newer release banner; the text comes from the network, so only textContent and a checked https link are used.
+  function showUpdate(u) {
+    let dismissed = "";
+    try { dismissed = sessionStorage.getItem("update-dismissed") || ""; } catch { /* private window */ }
+    const ok = u && typeof u.version === "string" && /^https:\/\/github\.com\//.test(u.url) && dismissed !== u.version;
+    $("#update-banner").hidden = !ok;
+    if (!ok) return;
+    $("#update-text").textContent = "ChatReader " + u.version + " is available.";
+    $("#update-link").href = u.url;
+    $("#update-close").onclick = () => {
+      try { sessionStorage.setItem("update-dismissed", u.version); } catch { /* ignore */ }
+      $("#update-banner").hidden = true;
+    };
+  }
+
   const uiButtons = document.querySelectorAll("button[data-ui]");
   const markUi = () => uiButtons.forEach((b) => b.setAttribute("aria-pressed", b.dataset.ui === document.documentElement.dataset.ui));
   uiButtons.forEach((b) => b.onclick = () => {
@@ -122,6 +137,7 @@
     if (s.error) throw new Error(s.error);
     App.status = s;
     headerStatus(s);
+    showUpdate(s.update);
     listeners.status.forEach((fn) => fn(s));
   }, 2000);
 })();

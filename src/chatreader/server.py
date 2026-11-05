@@ -234,6 +234,7 @@ def create_app(
     view: ViewHub | None = None,
     themes_dir: Path | None = None,
     twitch=None,  # TwitchChat: start_auth(client_id) / status(); lets the app answer in the Twitch chat
+    update: Callable[[], dict | None] | None = None,  # newer release {version, url} or None
 ) -> FastAPI:
     app = FastAPI()
     app.add_middleware(LocalOnly)
@@ -314,7 +315,8 @@ def create_app(
     @app.get("/api/status")
     def read_status():
         try:
-            return get_status()
+            status = get_status()
+            return status if update is None else {**status, "update": update()}
         except Exception as e:
             return {"error": str(e)}
 

@@ -19,6 +19,7 @@
   <div id="status"><span id="dot"></span><span id="status-text">loading…</span></div>
 </header>
 <div id="banner" role="alert" hidden>ChatReader not reachable</div>
+<div id="update-banner" role="status" hidden><span id="update-text"></span> <a id="update-link" target="_blank" rel="noopener noreferrer">What's new</a> <button type="button" id="update-close" aria-label="Dismiss">×</button></div>
 
 <nav id="home" aria-label="Menu">
   <button type="button" class="tile" data-group="live"><span class="ico" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><span><b>Live</b><small>Queue, controls, console</small></span></button>
@@ -341,6 +342,10 @@
             <input type="text" id="cpu_threads" inputmode="numeric" aria-label="CPU threads">
             <button type="button" data-d="1" aria-label="Increase CPU threads">+</button>
           </div>
+        </div>
+        <div class="row">
+          <div class="txt"><div class="name" id="l-updates">Check for new versions</div><div class="hint">Once a day, one request to GitHub (api.github.com); nothing about you is sent</div></div>
+          <button type="button" class="sw" role="switch" id="check_updates" aria-labelledby="l-updates" data-toggle="check_updates"></button>
         </div>
         <div class="row">
           <div class="txt"><div class="name" id="l-startup">Start with Windows</div><div class="hint">Launch minimized on sign-in</div></div>
