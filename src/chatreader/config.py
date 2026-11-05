@@ -63,6 +63,7 @@ class Config:
     random_cooldown_max: int = 300
     random_global_base: int = 2  # same idea for the whole chat
     random_global_max: int = 60
+    check_updates: bool = True  # once a day, ask GitHub whether a newer release exists; the only call home
     pronunciations: dict[str, str] = field(default_factory=dict)  # word -> how to say it, whole words, case-insensitive
     normalize_volume: bool = True  # bring every sentence to a similar loudness; Kokoro voices differ in level
 

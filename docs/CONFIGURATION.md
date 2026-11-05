@@ -45,6 +45,7 @@ The file uses the defaults below when a key is missing. Keys that are not known 
 | `repeat_seconds` | `30` | Skip the same text from anyone within this many seconds; `0` turns it off. |
 | `per_user_voices` | `true` | Give each viewer a stable voice picked from the model's voices. |
 | `normalize_volume` | `true` | Bring each spoken sentence to a similar loudness (RMS 0.1, gain at most 2.5×, never clipping), because Kokoro voices come out at different levels. Turn it off to get the raw voice level. Applies without a restart. |
+| `check_updates` | `true` | At start and once a day, one request to `https://api.github.com/repos/Masgod/ChatReader/releases/latest` (nothing is sent but a `ChatReader/<version>` User-Agent). A newer release shows a tray notification, a tray menu item and a banner. `false` = no request at all. |
 | `speak_emotes` | `true` | Read laughs (`LUL`, `KEKW`, `kkkk`, `rsrs`) as a laugh and leave out other emotes (`Kappa`, `:name:`). A message that is only emotes is skipped. |
 | `youtube_channel` | `""` | `@handle` or `UC...` channel ID. When set and `youtube_video_id` is empty, the app waits for the channel's live stream and connects by itself. |
 | `overlay_theme` | `"default"` | Chat overlay theme: a folder name under `themes/` in the app folder, or the built-in `default`. |

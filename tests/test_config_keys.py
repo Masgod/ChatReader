@@ -136,3 +136,11 @@ def test_load_config_ignores_a_pronunciations_value_of_the_wrong_type(tmp_path):
     p = tmp_path / "c.toml"
     p.write_text('pronunciations = "x"' + chr(10), encoding="utf-8")
     assert load_config(p).pronunciations == {}
+
+def test_check_updates_defaults_on_and_round_trips(tmp_path):
+    from chatreader.config import save_config
+
+    assert Config().check_updates is True
+    p = tmp_path / "c.toml"
+    save_config(p, Config(check_updates=False))
+    assert load_config(p).check_updates is False

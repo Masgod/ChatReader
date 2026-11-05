@@ -103,3 +103,12 @@ def test_touch_menu_filters_pages_by_level_and_offers_more_settings():
     assert 'level: "advanced"' in js and "dataset.level" in js
     assert html.count('class="tile"') == 4  # the extra button is not a tile
     assert "html[data-ui=touch] #more-settings" in css and "html[data-level=advanced] #more-home" in css
+
+
+def test_update_banner_and_check_switch_exist():
+    with _client() as c:
+        html = c.get("/settings").text
+        js = c.get("/static/app.js").text
+    assert 'id="update-banner"' in html and 'id="check_updates"' in html and 'data-toggle="check_updates"' in html
+    assert "s.update" in js and "update-dismissed" in js
+    assert "innerHTML" not in js  # the version and link come from the network: textContent only

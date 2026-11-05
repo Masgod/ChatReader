@@ -6,7 +6,7 @@ from dataclasses import replace
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from chatreader import restart, startup, tray
+from chatreader import __version__, restart, startup, tray
 from chatreader.config import Config, load_config, save_config
 from chatreader.controller import Controller
 from chatreader.events import EventLog, LogMirror
@@ -19,6 +19,7 @@ from chatreader.sources.youtube import run_youtube
 from chatreader.themes import hero_name, hero_slot
 from chatreader.tts import KokoroTTS, ensure_models
 from chatreader.twitch_chat import TwitchChat
+from chatreader.updates import UpdateChecker
 
 
 def _setup_logging(app: Path, debug: bool) -> None:
@@ -106,6 +107,7 @@ def main(home: str | None = None) -> None:
     icon_ref: list = []
     notify = lambda msg: icon_ref and icon_ref[0].notify(msg, "ChatReader")  # noqa: E731
 
+    checker = UpdateChecker(__version__, notify=lambda r: notify(f"ChatReader {r['version']} is available"), enabled=lambda: controller.cfg.check_updates)
     hub = Hub()
     voices = app / "voices"
     tts = KokoroTTS(voices, cfg, on_warning=lambda m: (log.warning(m), notify(m)))
@@ -142,7 +144,7 @@ def main(home: str | None = None) -> None:
     base = f"http://127.0.0.1:{cfg.port}"
     stop_server = lambda: None  # noqa: E731
     control = make_control(controller, lambda: icon)
-    icon = tray.build_icon(controller, f"{base}/settings", f"{base}/stream", lambda: control("quit"), lambda: control("restart"))
+    icon = tray.build_icon(controller, f"{base}/settings", f"{base}/stream", lambda: control("quit"), lambda: control("restart"), get_update=lambda: checker.available)
     icon_ref.append(icon)
 
     def boot(icon) -> None:
@@ -153,7 +155,7 @@ def main(home: str | None = None) -> None:
                 lambda: controller.cfg, apply_config, hub, controller.speak_test,
                 controller.snapshot, control,
                 queue=player, events=events, toggle=make_toggle(controller, apply_config), voices=tts.voices,
-                view=view, themes_dir=app / "themes", twitch=twitch,
+                view=view, themes_dir=app / "themes", twitch=twitch, update=lambda: checker.available,
             )
             stop_server = run_server(app_obj, cfg.port)  # raises if the port is taken
             if first_run:
@@ -164,6 +166,7 @@ def main(home: str | None = None) -> None:
             tts.reload(controller.cfg)
             player.start()
             controller.start()
+            checker.start()  # last: nothing about the update check can delay the app
         except Exception as e:
             log.exception("startup failed")
             icon.notify(f"Failed to start: {e}"[:200], "ChatReader")
